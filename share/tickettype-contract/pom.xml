@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.kacean.power</groupId>
+        <artifactId>share</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>tickettype-contract</artifactId>
+    <!-- tickettype 子域对外契约：XxxFacade 接口、XxxView DTO、领域事件。
+         包名 com.kacean.power.tickettype.contract；只使用 JDK，可按需依赖 share/core，
+         不得依赖 ticket-app/infra 等实现模块；契约实现（XxxFacadeImpl）位于 ticket-app 的 tickettype.app 子域 -->
+    <description>tickettype 子域对外契约（Facade/DTO/事件），纯 Java，由提供方子域实现、消费方按需依赖</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+</project>

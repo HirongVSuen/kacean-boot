@@ -1,8 +1,12 @@
 # power-system
 
-`power-system` 是一个基于 Java 21 的 Maven 多模块单体后端工程。项目通过 `runner`、`common`、`business`、`core-share` 四个顶层模块组织代码，业务模块按 `web / app / infra` 分层，并使用独立的 `deploy` 模块组合部署依赖。`web` 只处理 Spring MVC，`app` 只使用 Spring DI 与 Jakarta Persistence API，`infra` 承载持久化和外部系统适配。
+`power-system` 是一个基于 Java 21 的 Maven 多模块单体后端工程。项目通过 `runner`、`common`、`business`、`share` 四个顶层模块组织代码，业务模块按 `web / app / infra` 分层，并使用独立的 `deploy` 模块组合部署依赖。`web` 只处理 Spring MVC，`app` 只使用 Spring DI 与 Jakarta Persistence API，`infra` 承载持久化和外部系统适配。
 
 工程采用 **thin jar + 外置 runtime 依赖** 的分发方式，最终生成包含应用、依赖、配置、静态资源和启停脚本的 ZIP 分发包。
+
+## 文档
+
+- [领域术语表](docs/domain/glossary.md)：业务术语、代码命名与禁用叫法的唯一来源，涉及业务命名或领域建模前先阅读。
 
 ## 技术基线
 
@@ -38,14 +42,16 @@ power-system/
 │   │   └── ticket-infra/                仓储实现、外部客户端、持久化适配
 │   └── deploy/                          部署聚合层
 │       └── ticket-deploy/               组合 ticket-web/app/infra，供 runner 依赖
-└── core-share/                          跨业务共享内核（纯 Java jar）
+└── share/                               共享与契约聚合层（纯 Java，按需显式依赖）
+    ├── core/                            跨业务共享内核：稳定共享领域类型（原 core-share）
+    └── tickettype-contract/             tickettype 子域对外契约（Facade/DTO/事件）
 ```
 
 `common-web`、`common-app`、`common-infra`、`common-util` 均为普通 jar 依赖模块，不作为业务模块的 parent。`common-web` 只依赖 `spring-webmvc`；`common-app` 只提供 Spring Context DI 与 Jakarta Persistence API；`common-infra` 集中基础设施适配依赖；`common-util` 聚合常用工具库。`common-test` 仅以 `test` scope 被部署模块依赖，不进入运行时 `lib/`。
 
 业务 `web/app/infra` 子模块的 parent 是对应业务聚合模块（当前为 `ticket`），再通过 Maven dependency 引入相应的 `common-*`。继承只负责项目构建配置，分层公共能力通过依赖传递。
 
-`core-share` 是独立的纯 Java jar，用于跨业务共享稳定且无单一业务归属的领域类型与契约，不放工具类、业务实现或框架配置，也不依赖其他项目模块。业务模块实际需要时显式依赖 `core-share`，未被依赖时不会进入分发包。详细边界见 [`core-share/README.md`](core-share/README.md)。
+`share` 是共享与契约聚合层：`share/core` 只放稳定、无单一业务归属的跨业务共享领域类型（原 `core-share`）；`share/<子域>-contract` 放对应子域的对外契约（`XxxFacade` 接口、DTO、领域事件），由提供方子域在 app 层实现、消费方按需显式依赖。两者均为纯 Java jar，不依赖业务实现或框架，未被依赖时不会进入分发包。详细边界见 [`share/README.md`](share/README.md)。
 
 领域模型可以直接使用 JPA 注解，但 `app` 不引入 Hibernate、Spring Data JPA 等具体实现。JPA Provider、数据源和持久化适配由 `infra` 或部署侧按需配置。
 
@@ -63,8 +69,10 @@ standalone-runner
 
 必须遵守以下约束：
 
-- 同业务依赖方向为 `web → app`、`infra → app`；业务模块可按需依赖 `core-share`，`core-share` 不反向依赖任何业务或公共技术模块。
+- 同业务依赖方向为 `web → app`、`infra → app`；业务模块可按需依赖 `share/core` 与所需的 `share/<子域>-contract`，`share` 下模块不反向依赖任何业务或公共技术模块。
 - `app` 不依赖同业务 `web` 或 `infra`，`web` 不直接依赖 `infra`，`infra` 不依赖 `web`。
+- 业务代码按 `com.kacean.power.<子域>.<web|app|infra>` 组织（如 `tickettype/web`、`tickettype/app`、`tickettype/infra`），子域名全局唯一且三层一致；层根包下不得直接建类，需再按 `controller/service/domain` 等技术分包细分；不同子域的实现包之间不能调用（同层、跨层均禁止），仅允许同一子域内按 `web → app`、`infra → app` 分层调用。该约束由 `common-test` 的 ArchUnit 规则强制。
+- 子域间同步调用经由 `share/<子域>-contract` 模块的 `<子域>.contract` 契约包：契约以 `XxxFacade` 接口命名（DTO、领域事件同包），提供方在 `app` 层对应子域以 `XxxFacadeImpl` 实现，消费方只注入契约接口；契约包不得依赖任何 `web/app/infra` 实现。`share/core` 只放跨业务共享领域类型，不承担子域契约。
 - `standalone-runner` 只依赖部署子模块，不承载业务代码。
 - `web` 只使用 Spring MVC；`common-web` 不依赖 Boot Starter、Tomcat 或 Jackson。`app` 只使用 Spring DI 相关类型和 Jakarta JPA 注解；具体 Web、数据访问和外部客户端实现不放入 `app`。
 - `app` 不引入 Hibernate、Spring Data JPA 等持久化实现，JPA Provider 与数据源由 `infra` 或部署侧配置。
@@ -78,10 +86,13 @@ standalone-runner
 
 | 代码类型 | 模块 | 建议包名 |
 | --- | --- | --- |
-| Spring MVC Controller、DTO、assembler、MVC 配置 | `<域>-web` | `com.kacean.power.<域>.web.{controller,dto,assembler,config}` |
-| 应用服务、command/query、领域模型（可使用 JPA 注解）、仓储接口 | `<域>-app` | `com.kacean.power.<域>.app.{service,domain,repository}` |
-| 跨业务稳定共享领域类型与契约 | `core-share` | `com.kacean.power.core.share` |
-| 仓储实现、外部客户端、持久化适配 | `<域>-infra` | `com.kacean.power.<域>.infra.{persistence,client,config}` |
+| Spring MVC Controller、DTO、assembler、MVC 配置 | `<域>-web` | `com.kacean.power.<子域>.web.{controller,dto,assembler,config}` |
+| 应用服务、command/query、领域模型（可使用 JPA 注解）、仓储接口 | `<域>-app` | `com.kacean.power.<子域>.app.{service,domain,repository}` |
+| 子域间调用契约（Facade 接口、DTO、领域事件） | `share/<子域>-contract` | `com.kacean.power.<子域>.contract` |
+| 跨业务稳定共享领域类型 | `share/core` | `com.kacean.power.core.share` |
+| 仓储实现、外部客户端、持久化适配 | `<域>-infra` | `com.kacean.power.<子域>.infra.{persistence,client,config}` |
+
+其中 `<子域>` 为业务子域名，全小写且全局唯一（如 `tickettype`），同一子域在 `web/app/infra` 三层使用相同的分包名；Maven 业务模块仍按业务域聚合（`ticket-web/app/infra`），包名不再包含业务域层级。跨子域调用示例：`ticketorder` 需要工单类型数据时，依赖 `share/tickettype-contract` 并注入 `tickettype.contract.TicketTypeFacade`，由 `tickettype/app` 的 `TicketTypeFacadeImpl` 提供实现，不直接 import `tickettype` 子域任何实现类。
 
 ### app 的 DI 与持久化注解
 
@@ -315,7 +326,7 @@ sh .agents/skills/power-system-build/scripts/verify.sh
 6. 在 `standalone-runner/pom.xml` 中添加对 `<域>-deploy` 的依赖。
 7. 如需执行全局架构规则，让 `<域>-deploy` 以 `test` scope 依赖 `common-test`，并添加显式声明 `@AnalyzeClasses` 的测试子类。
 8. `common-web` 只保留 `spring-webmvc`，`common-app` 只保留 Spring DI 与 Jakarta Persistence API，基础设施公共依赖放入 `common-infra`；需要多类高频工具时依赖 `common-util`，单个或低频工具由使用方直接声明。
-9. 只有稳定且确实跨业务共享的领域类型或契约才放入 `core-share`，由使用方显式依赖；不要将单一业务代码或普通工具类移入其中。
+9. 只有稳定且确实跨业务共享的领域类型才放入 `share/core`；子域对外契约放 `share/<子域>-contract`，均由使用方显式依赖；不要将单一业务实现或普通工具类移入其中。
 
 ## 打包与脚本约定
 

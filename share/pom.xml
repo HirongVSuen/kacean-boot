@@ -9,13 +9,21 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>core-share</artifactId>
-    <description>跨业务共享内核：稳定共享领域类型与契约，纯 Java，不依赖框架或业务模块</description>
+    <artifactId>share</artifactId>
+    <packaging>pom</packaging>
+    <!-- 共享与契约聚合：core 只放稳定跨业务共享内核；<子域>-contract 放该子域对外 Facade 契约。
+         所有子模块均为纯 Java jar，不依赖业务实现模块，只有被显式依赖才进入分发包 -->
+    <description>共享与契约聚合：core 稳定共享内核 + 各子域 contract 契约模块（纯 Java，按需显式依赖）</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <modules>
+        <module>core</module>
+        <module>tickettype-contract</module>
+    </modules>
 
 </project>

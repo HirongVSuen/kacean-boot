@@ -12,7 +12,7 @@
         <module>runner</module>
         <module>common</module>
         <module>business</module>
-        <module>core-share</module>
+        <module>share</module>
     </modules>
 
     <properties>

@@ -1,15 +1,15 @@
-# core-share
+# core（share/core）
 
-`core-share` 是 power-system 的**跨业务共享内核**，用于沉淀稳定、无单一业务归属的领域类型与契约。
+`core` 是 power-system 的**跨业务共享内核**（原 `core-share`），用于沉淀稳定、无单一业务归属的领域类型。
 
-它是根目录下的普通 Java jar 模块，不是公共工具包，也不承担跨业务服务调用。当前提供设备引用、人员引用与场站信息，只有被其他模块显式依赖后才会进入应用分发包。
+它是 `share` 聚合下的普通 Java jar 模块，不是公共工具包，也不承担跨业务服务调用。当前提供设备引用、人员引用与场站信息，只有被其他模块显式依赖后才会进入应用分发包。**各子域的对外调用契约（Facade/DTO/事件）不放在这里，而是放在 `share/<子域>-contract` 模块。**
 
 ## 模块边界
 
 ### 可以放入
 
 - 多个业务共同使用、含义稳定且定义一致的领域值对象。
-- 跨业务共享的领域标识、枚举和稳定契约。
+- 跨业务共享的领域标识、枚举等稳定类型。
 - 不含框架注解的纯 Java 领域事件或数据传输类型。
 
 ### 不应放入
@@ -23,14 +23,14 @@
 
 ## 依赖约束
 
-`core-share` 的主代码只使用 JDK，不依赖其他项目模块，也不依赖 Spring、Jakarta 或第三方框架。不得通过增加依赖让它反向依赖 `common-*`、`ticket-*` 或其他业务模块。
+`core` 的主代码只使用 JDK，不依赖其他项目模块，也不依赖 Spring、Jakarta 或第三方框架。不得通过增加依赖让它反向依赖 `common-*`、`ticket-*` 或其他业务模块。
 
 业务模块确有使用需求时显式添加：
 
 ```xml
 <dependency>
     <groupId>com.kacean.power</groupId>
-    <artifactId>core-share</artifactId>
+    <artifactId>core</artifactId>
     <version>${project.version}</version>
 </dependency>
 ```
@@ -107,16 +107,16 @@ Site(SiteType siteType, String name, String internalCode)
 2. **保持稳定**：优先新增兼容能力，谨慎修改已有类型的字段、构造器、方法签名和语义。
 3. **避免业务泄漏**：不要为了某个业务的特殊需求给共享类型增加专用字段或行为。
 4. **保持纯 Java**：共享类型不应依赖 Web、IoC、持久化或序列化框架才能使用。
-5. **不做服务代理**：跨业务流程调用仍由业务应用服务负责，`core-share` 只承载稳定共享类型与契约。
+5. **不做服务代理**：跨业务流程调用仍由业务应用服务负责，`core` 只承载稳定共享类型，子域契约归 `share/<子域>-contract`。
 
 新增或修改共享类型前，应确认所有依赖方，并进行兼容性检查：
 
 ```bash
-# 构建 core-share 自身
-mvn test -pl core-share
+# 构建 share/core 自身
+mvn test -pl share/core
 
-# 示例：检查 ticket-app 对 core-share 的实际依赖
-mvn -pl business/ticket/ticket-app -am compile dependency:tree -Dincludes=com.kacean.power:core-share
+# 示例：检查 ticket-app 对 share/core 的实际依赖
+mvn -pl business/ticket/ticket-app -am compile dependency:tree -Dincludes=com.kacean.power:core
 
 # 依赖或结构变更后的完整验证；8080 被占用时可指定其他端口
 sh .agents/skills/power-system-build/scripts/verify.sh 18080
