@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 共享 logback 配置：随 log 模块 jar 进入 classpath，由 Spring Boot 自动加载 -->
+<!-- 控制台 + 文件双输出；文件按天与大小滚动，保留 30 天 -->
+<configuration>
+    <!-- 引入 Spring Boot 默认日志格式（CONSOLE_LOG_PATTERN / FILE_LOG_PATTERN）与控制台 appender -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- 文件输出目录：优先取 logging.file.path，默认工作目录下 .logs -->
+    <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue=".logs"/>
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/power-system.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 按天输出，单文件超 50MB 再切分；当月（30 天内）保留原始 .log 不压缩 -->
+            <fileNamePattern>${LOG_PATH}/power-system.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>
+            <!-- 不设 maxHistory：过月日志由 bin/archive-logs 脚本压缩归档到 .logs/archive，留存不删除 -->
+        </rollingPolicy>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+</configuration>

@@ -1,0 +1,49 @@
+schema: spec-driven
+
+context: |
+  Language: Simplified Chinese
+  All artifacts must be written in Simplified Chinese.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+
+  项目事实以 README.md、根 pom.xml、core-share/README.md 为准。
+  构建与架构约束见 .agents/skills/power-system-build/SKILL.md。
+
+  技术栈为 Java 21、Maven 多模块、Spring Boot、Spring MVC、Jakarta Persistence API。
+  依赖方向仅允许 web -> app、infra -> app；deploy 组合业务模块，runner 只依赖 deploy。
+  app 不引入 Web 或具体持久化实现，infra 承载持久化与外部客户端。
+  core-share 只放稳定、跨业务、纯 Java 的共享领域类型，不放工具类或框架实现。
+  项目使用 thin jar + 外置依赖，禁止改为 fat jar。
+  当前没有具体数据库和 JPA Provider，新增相关实现前必须明确提案和设计。
+
+rules:
+  proposal:
+    - 明确背景、范围、非目标和受影响模块。
+    - 涉及公共契约、配置、数据库或依赖变化时，说明兼容性与回滚方案。
+    - 不为了预期复用而提前增加模块或抽象。
+
+  specs:
+    - 使用 OpenSpec Requirement/Scenario 格式，场景包含明确的 WHEN/THEN。
+    - 覆盖正常流程、异常处理和关键边界，需求必须可验证。
+    - 修改现有行为时明确变化点，避免与现有规格重复或冲突。
+
+  design:
+    - 只记录必要技术决策，不重复 README。
+    - 必须符合现有 Maven 模块边界和依赖方向。
+    - 修改 core-share 或公共 API 时，说明兼容性影响。
+
+  tasks:
+    - 按可独立验证的小步骤排列，包含测试和必要文档同步。
+    - 构建、依赖、结构、打包、脚本或日志改动必须包含标准验证。
+
+operations:
+  apply:
+    guidance:
+      - 修改前核对实际源码和 POM，不凭规格假设项目现状。
+      - 按 tasks.md 小步实施并更新任务状态，不擅自扩大范围。
+      - 先运行受影响模块的聚焦测试。
+      - 构建、依赖、结构、打包、脚本或日志改动后，执行 sh .agents/skills/power-system-build/scripts/verify.sh。
+
+  archive:
+    guidance:
+      - 仅在任务完成且验证通过后归档。
+      - 归档后确认主 specs 已同步，并简要记录验证结果。

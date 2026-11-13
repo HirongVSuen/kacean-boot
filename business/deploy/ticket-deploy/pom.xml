@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.kacean.power</groupId>
+        <artifactId>deploy</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>ticket-deploy</artifactId>
+    <description>ticket 业务部署子模块：组合 ticket-web/app/infra，供 runner 单体启动模块依赖</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- 公共测试支持：继承全局架构守护规则；test scope 不进入运行时 lib -->
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>common-test</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- 业务模块随分发 -->
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>ticket-web</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>ticket-app</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>ticket-infra</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+</project>

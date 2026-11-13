@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.kacean.power</groupId>
+        <artifactId>runner</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>standalone-runner</artifactId>
+    <description>单体启动模块：可独立运行的 Spring Boot 应用</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- 业务模块统一经 business/deploy/ticket-deploy 部署子模块引入 -->
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>ticket-deploy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 单体运行时提供 Boot MVC 自动配置、嵌入式 Tomcat 与 Jackson；common-web 本身不依赖 Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 模块自身由 maven-jar-plugin 打 thin jar（仅应用代码，不含依赖） -->
+            <!-- assembly 按独立描述符打 zip 分发包：thin jar + lib 外置依赖 + 独立配置/脚本资源 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>assembly.xml</descriptor>
+                    </descriptors>
+                    <appendAssemblyId>false</appendAssemblyId>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

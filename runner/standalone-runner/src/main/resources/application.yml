@@ -1,0 +1,14 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: power-system-standalone
+  web:
+    resources:
+      # web 资源包：优先使用分发包外置 web/ 目录（可直接修改），jar 内 resources/web 兑底
+      static-locations: file:./web/,classpath:/web/
+
+logging:
+  # 默认加载 jar 内配置（本地 IDE 启动可用）；分发包启动脚本通过 --logging.config 指定外置 conf/logback-spring.xml 覆盖此项
+  config: classpath:conf/logback-spring.xml
