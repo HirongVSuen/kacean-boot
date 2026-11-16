@@ -10,8 +10,8 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>ticket-web</artifactId>
-    <description>工单-web 层：Spring MVC Controller、DTO、assembler，调用 app 层应用服务</description>
+    <artifactId>ticket-port</artifactId>
+    <description>工单-端口层：web 包承载 Spring MVC Controller、DTO、assembler，infra 包承载仓储实现、外部客户端，均只调用 app 层</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -20,13 +20,19 @@
     </properties>
 
     <dependencies>
-        <!-- 通过依赖获得最小 Spring MVC，不再继承 common-web -->
+        <!-- web 包：通过依赖获得最小 Spring MVC，不再继承 common-web -->
         <dependency>
             <groupId>com.kacean.power</groupId>
             <artifactId>common-web</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- Controller 调用 app 层应用服务，方向为 web → app -->
+        <!-- infra 包：基础设施公共依赖，不再继承 common-infra -->
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>common-infra</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- web 与 infra 均只调用 app 层应用服务与仓储接口，方向为 port → app -->
         <dependency>
             <groupId>com.kacean.power</groupId>
             <artifactId>ticket-app</artifactId>

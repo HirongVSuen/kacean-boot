@@ -12,7 +12,7 @@ description: power-system 共享与契约层（share）开发指南。新增或�
 | 模块 | 内容 | 依赖约束 | 变更要求 |
 | --- | --- | --- | --- |
 | `core` | 稳定、跨业务、无单一业务归属的领域类型 | 只用 JDK | 最高谨慎，评估全部使用方 |
-| `<子域>-contract` | 提供方子域所有的 `XxxFacade`、`XxxView`、领域事件 | 只用 JDK，可按需依赖 `core`；不得依赖任何 web/app/infra 实现模块 | 随提供方演化，变更需评估消费方兼容性 |
+| `<子域>-contract` | 提供方子域所有的 `XxxFacade`、`XxxView`、领域事件 | 只用 JDK，可按需依赖 `core`；不得依赖任何 app/port 实现模块 | 随提供方演化，变更需评估消费方兼容性 |
 
 - 契约归提供方，不把高频演化的业务契约放进 `core`。
 - 只有真实跨子域调用需求出现时才创建契约；子域内部类型不进 share。
@@ -30,7 +30,7 @@ description: power-system 共享与契约层（share）开发指南。新增或�
 ## 3. 消费方接入步骤
 
 1. 只添加对方 `<子域>-contract` 的 Maven 依赖，构造器注入 `XxxFacade`。
-2. 不得依赖对方 `ticket-app` 等实现模块，不得 import 对方 `web/app/infra` 实现包。
+2. 不得依赖对方 `ticket-app`、`ticket-port` 等实现模块，不得 import 对方 app/port 实现包。
 3. 不绕过契约直接访问对方领域对象或仓储。
 
 ## 4. 联动要点

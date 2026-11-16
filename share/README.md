@@ -11,7 +11,7 @@
 
 - **子域契约不进入 `core`**：`core` 只放真正跨业务共享的稳定类型；每个子域的对外契约独立成 `<子域>-contract` 模块，避免高频演化的业务契约污染最稳定的共享内核。
 - **契约与实现分离**：契约模块只有接口/DTO/事件；实现 `XxxFacadeImpl` 位于提供方业务模块的 `<子域>.app` 包，由 Spring 注入。
-- **消费方只依赖契约**：需要调用其他子域时，只添加对方 `<子域>-contract` 的 Maven 依赖并注入 `XxxFacade`，不依赖对方的 `web/app/infra` 实现模块。
+- **消费方只依赖契约**：需要调用其他子域时，只添加对方 `<子域>-contract` 的 Maven 依赖并注入 `XxxFacade`，不依赖对方的 `app/port` 实现模块。
 
 ## 依赖约束
 
@@ -24,8 +24,8 @@
 
 `common-test` 的 `GlobalArchitectureTest` 强制：
 
-- 不同子域的 `web/app/infra` 实现包之间禁止依赖（切片隔离）；`<子域>.contract` 不参与切片，是跨子域唯一合法入口。
-- `..contract..` 与 `..core.share..` 不得依赖任何 `web/app/infra` 实现。
+- 不同子域的 `app/port` 实现包之间禁止依赖（切片隔离）；`<子域>.contract` 不参与切片，是跨子域唯一合法入口。
+- `..contract..` 与 `..core.share..` 不得依赖任何 `app/port` 实现。
 - `XxxFacade` 接口只能位于 `<子域>.contract`；`XxxFacadeImpl` 只能位于 app 子域。
 
 ## 新增子域契约模块

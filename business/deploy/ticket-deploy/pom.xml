@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>ticket-deploy</artifactId>
-    <description>ticket 业务部署子模块：组合 ticket-web/app/infra，供 runner 单体启动模块依赖</description>
+    <description>ticket 业务部署子模块：组合 ticket-app/port，供 runner 单体启动模块依赖</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -29,17 +29,12 @@
         <!-- 业务模块随分发 -->
         <dependency>
             <groupId>com.kacean.power</groupId>
-            <artifactId>ticket-web</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.kacean.power</groupId>
             <artifactId>ticket-app</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.kacean.power</groupId>
-            <artifactId>ticket-infra</artifactId>
+            <artifactId>ticket-port</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

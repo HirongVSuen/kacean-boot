@@ -37,7 +37,11 @@ code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/")
 [ "$code" = "200" ] || { echo "[失败] / 返回 $code"; exit 1; }
 code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/index.html")
 [ "$code" = "200" ] || { echo "[失败] /index.html 返回 $code"; exit 1; }
-echo "断言通过：启动日志正常，/ 与 /index.html 均 200，.logs/power-system.log 已生成"
+code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/swagger-ui/index.html")
+[ "$code" = "200" ] || { echo "[失败] /swagger-ui/index.html 返回 $code"; exit 1; }
+code=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/v3/api-docs")
+[ "$code" = "200" ] || { echo "[失败] /v3/api-docs 返回 $code"; exit 1; }
+echo "断言通过：启动日志正常，首页、Swagger UI 与 OpenAPI JSON 均可访问，.logs/power-system.log 已生成"
 
 echo "==> 4/4 停止并清理"
 sh "$APP_DIR/bin/stop.sh"

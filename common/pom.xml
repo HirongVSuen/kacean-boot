@@ -19,6 +19,7 @@
         <module>common-app</module>
         <module>common-infra</module>
         <module>common-util</module>
+        <module>common-codegen</module>
     </modules>
 
     <properties>

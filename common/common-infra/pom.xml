@@ -10,12 +10,29 @@
     </parent>
 
     <artifactId>common-infra</artifactId>
-    <description>infra 公共依赖模块：按需集中持久化与外部系统适配依赖</description>
+    <description>infra 公共依赖模块：集中持久化与外部系统适配的公共代码与依赖</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
+
+    <dependencies>
+        <!-- 仓储接口、BaseEntity 与分页模型；方向为 infra → app -->
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>common-app</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- 持久化基类注解与 Mapper API；不引入 Starter、数据源或 JDBC 驱动 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
 
 </project>

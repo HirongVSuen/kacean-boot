@@ -10,7 +10,7 @@
     </parent>
 
     <artifactId>common-app</artifactId>
-    <description>app 公共依赖模块：只提供 Spring DI 与 Jakarta Persistence API</description>
+    <description>app 公共依赖模块：提供 Spring DI 与实体、分页、仓储等通用应用层基类</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -23,11 +23,7 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
-        </dependency>
-        <!-- 领域模型可使用 JPA 注解；不引入 Hibernate 或其他持久化实现 -->
-        <dependency>
-            <groupId>jakarta.persistence</groupId>
-            <artifactId>jakarta.persistence-api</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

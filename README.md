@@ -1,20 +1,23 @@
 # power-system
 
-`power-system` 是一个基于 Java 21 的 Maven 多模块单体后端工程。项目通过 `runner`、`common`、`business`、`share` 四个顶层模块组织代码，业务模块按 `web / app / infra` 分层，并使用独立的 `deploy` 模块组合部署依赖。`web` 只处理 Spring MVC，`app` 只使用 Spring DI 与 Jakarta Persistence API，`infra` 承载持久化和外部系统适配。
+`power-system` 是一个基于 Java 21 的 Maven 多模块单体后端工程。项目通过 `runner`、`common`、`business`、`share` 四个顶层模块组织代码，业务模块按 `app / port` 组织：`app` 是独立应用模块，只使用 Spring DI 与通用应用层基类，不绑定持久化技术；`port` 同时承载 `web`（Spring MVC）与 `infra`（持久化和外部系统适配）两个包，并使用独立的 `deploy` 模块组合部署依赖。**DDD 前期贫血模式下 `web` 可直接调用 `infra`**，简单 CRUD 不绕道 `app`；业务复杂度上升后才由 `app` 的应用服务承载用例编排。
 
 工程采用 **thin jar + 外置 runtime 依赖** 的分发方式，最终生成包含应用、依赖、配置、静态资源和启停脚本的 ZIP 分发包。
 
 ## 文档
 
 - [领域术语表](docs/domain/glossary.md)：业务术语、代码命名与禁用叫法的唯一来源，涉及业务命名或领域建模前先阅读。
+- [MyBatis-Plus 代码生成](.agents/skills/power-system-codegen/SKILL.md)：开发期业务模块脚手架与按子域生成 PO、Mapper、Mapper XML。
 
 ## 技术基线
 
 | 项目 | 当前版本或约定 |
 | --- | --- |
 | Java | 21 |
-| Jakarta EE | 10.0.0，通过 `jakarta.jakartaee-bom` 统一管理规范 API 版本 |
-| Spring Boot | 3.5.16，由 `standalone-runner` 提供 Boot MVC 自动配置与嵌入式容器，通过 BOM 管理版本 |
+| Spring Boot | 4.1.2，由 `standalone-runner` 提供 Boot MVC 自动配置与嵌入式容器，通过 BOM 管理版本 |
+| 接口文档 | springdoc-openapi 3.2.0，由 `standalone-runner` 提供 Swagger UI 与 OpenAPI JSON |
+| MyBatis-Plus | 3.5.18，通过 `mybatis-plus-bom` 统一管理版本；`standalone-runner` 引入 Boot 4 Starter 与 MySQL 运行时驱动，`common-codegen` 仅含开发期生成器与元数据驱动 |
+| 持久化 | runner 已提供 MySQL 基础设施，业务持久化适配由对应 `port` 实现，不使用 JPA |
 | 项目坐标 | `com.kacean.power:power-system:1.0-SNAPSHOT` |
 | 构建工具 | Maven 多模块 |
 | 分发打包 | `maven-assembly-plugin` 3.8.0 |
@@ -31,54 +34,54 @@ power-system/
 │   └── standalone-runner/               单体启动入口、运行资源与分发打包
 ├── common/                              公共层，不包含业务代码
 │   ├── common-test/                     全局 ArchUnit 规则与共享测试配置（jar）
-│   ├── common-web/                      最小 Spring MVC 公共依赖（jar）
-│   ├── common-app/                      Spring DI 与 JPA API 公共依赖（jar）
-│   ├── common-infra/                    基础设施公共依赖（jar）
-│   └── common-util/                     Guava 与 Apache Commons 工具集（jar）
+│   ├── common-web/                      最小 Spring MVC、通用 MVC 基类与统一请求/响应体（jar）
+│   ├── common-app/                      Spring DI 与通用应用层基类（jar）
+│   ├── common-infra/                    基础设施公共代码与依赖（jar）
+│   ├── common-util/                     Guava 与 Apache Commons 工具集（jar）
+│   └── common-codegen/                  开发期 MyBatis-Plus 代码生成器，不进入业务运行时（jar）
 ├── business/                            业务聚合层
 │   ├── ticket/                          工单业务模块
-│   │   ├── ticket-web/                  Spring MVC Controller、DTO、assembler
-│   │   ├── ticket-app/                  应用服务、领域模型（可使用 JPA 注解）、仓储接口
-│   │   └── ticket-infra/                仓储实现、外部客户端、持久化适配
+│   │   ├── ticket-app/                  应用服务、领域模型（纯 Java）、仓储接口（独立模块）
+│   │   └── ticket-port/                 web（Controller、DTO、assembler）+ infra（仓储实现、外部客户端）
 │   └── deploy/                          部署聚合层
-│       └── ticket-deploy/               组合 ticket-web/app/infra，供 runner 依赖
+│       └── ticket-deploy/               组合 ticket-app/port，供 runner 依赖
 └── share/                               共享与契约聚合层（纯 Java，按需显式依赖）
     ├── core/                            跨业务共享内核：稳定共享领域类型（原 core-share）
     └── tickettype-contract/             tickettype 子域对外契约（Facade/DTO/事件）
 ```
 
-`common-web`、`common-app`、`common-infra`、`common-util` 均为普通 jar 依赖模块，不作为业务模块的 parent。`common-web` 只依赖 `spring-webmvc`；`common-app` 只提供 Spring Context DI 与 Jakarta Persistence API；`common-infra` 集中基础设施适配依赖；`common-util` 聚合常用工具库。`common-test` 仅以 `test` scope 被部署模块依赖，不进入运行时 `lib/`。
+`common-web`、`common-app`、`common-infra`、`common-util` 均为普通 jar 依赖模块，不作为业务模块的 parent。`common-web` 依赖 `spring-webmvc`、`common-app` 与 `swagger-annotations-jakarta`（仅注解包），承载通用 MVC 能力；`common-app` 提供 Spring Context DI 与通用应用层能力。**两者原有的通用基类（`BaseController`、`Result`、`PageRequest`、`BaseEntity`、`BaseRepository`、`BaseService` 等）已随本轮重构清空，模块仅保留骨架，待重新设计**；`common-infra` 集中基础设施适配的公共代码与依赖，提供带 MyBatis-Plus 注解的持久化 `BaseEntity`；`common-util` 聚合常用工具库。`common-test` 仅以 `test` scope 被部署模块依赖，不进入运行时 `lib/`。`common-codegen` 提供交互式/命令行代码生成，输出位于目标业务子域的 `port.infra.persistence`，不作为业务或启动模块依赖。
 
-业务 `web/app/infra` 子模块的 parent 是对应业务聚合模块（当前为 `ticket`），再通过 Maven dependency 引入相应的 `common-*`。继承只负责项目构建配置，分层公共能力通过依赖传递。
+原 `standalone-runner` 中的全局异常处理 `GlobalExceptionHandler` 依赖被清空的 `Result` 与 `EntityNotFoundException`，已随本轮重构一并移除，待重新设计。
+
+业务 `app/port` 子模块的 parent 是对应业务聚合模块（当前为 `ticket`），再通过 Maven dependency 引入相应的 `common-*`。继承只负责项目构建配置，分层公共能力通过依赖传递。
 
 `share` 是共享与契约聚合层：`share/core` 只放稳定、无单一业务归属的跨业务共享领域类型（原 `core-share`）；`share/<子域>-contract` 放对应子域的对外契约（`XxxFacade` 接口、DTO、领域事件），由提供方子域在 app 层实现、消费方按需显式依赖。两者均为纯 Java jar，不依赖业务实现或框架，未被依赖时不会进入分发包。详细边界见 [`share/README.md`](share/README.md)。
 
-领域模型可以直接使用 JPA 注解，但 `app` 不引入 Hibernate、Spring Data JPA 等具体实现。JPA Provider、数据源和持久化适配由 `infra` 或部署侧按需配置。
+领域模型为纯 Java 对象，不使用 JPA 等持久化框架注解。持久化适配由 `port` 或部署侧按需配置。ticket 子域（`tickettype`）原有的应用服务、领域模型、仓储与控制器代码已随本轮重构清空，仅保留 `ticket-app`/`ticket-port` 模块骨架。
 
 ### 依赖方向
 
 ```text
 standalone-runner
 └── ticket-deploy
-    ├── ticket-web ───────> ticket-app
-    │   └── common-web（最小 Spring MVC）
-    ├── ticket-infra ─────> ticket-app
+    ├── ticket-port ──────> ticket-app
+    │   ├── common-web（最小 Spring MVC + 通用 MVC 基类 + 统一请求/响应体）
     │   └── common-infra
-    └── ticket-app ───────> common-app（Spring DI + JPA API）
+    └── ticket-app ───────> common-app（Spring DI + 通用应用层基类）
 ```
 
 必须遵守以下约束：
 
-- 同业务依赖方向为 `web → app`、`infra → app`；业务模块可按需依赖 `share/core` 与所需的 `share/<子域>-contract`，`share` 下模块不反向依赖任何业务或公共技术模块。
-- `app` 不依赖同业务 `web` 或 `infra`，`web` 不直接依赖 `infra`，`infra` 不依赖 `web`。
-- 业务代码按 `com.kacean.power.<子域>.<web|app|infra>` 组织（如 `tickettype/web`、`tickettype/app`、`tickettype/infra`），子域名全局唯一且三层一致；层根包下不得直接建类，需再按 `controller/service/domain` 等技术分包细分；不同子域的实现包之间不能调用（同层、跨层均禁止），仅允许同一子域内按 `web → app`、`infra → app` 分层调用。该约束由 `common-test` 的 ArchUnit 规则强制。
-- 子域间同步调用经由 `share/<子域>-contract` 模块的 `<子域>.contract` 契约包：契约以 `XxxFacade` 接口命名（DTO、领域事件同包），提供方在 `app` 层对应子域以 `XxxFacadeImpl` 实现，消费方只注入契约接口；契约包不得依赖任何 `web/app/infra` 实现。`share/core` 只放跨业务共享领域类型，不承担子域契约。
+- 同业务依赖方向为 `port → app`；**port 模块内 `web` 可直接调用 `infra`**（贫血阶段简单 CRUD 不强制经过 app），`infra` 不得反向依赖 `web`，`app` 不依赖 `port`。业务模块可按需依赖 `share/core` 与所需的 `share/<子域>-contract`，`share` 下模块不反向依赖任何业务或公共技术模块。
+- 业务代码按 `com.kacean.power.<子域>.app` 与 `com.kacean.power.<子域>.port.<web|infra>` 组织（如 `tickettype/app`、`tickettype/port/web`、`tickettype/port/infra`），子域名全局唯一且 app 与 port 包一致；层根包下不得直接建类，需再按 `controller/service/domain` 等技术分包细分；不同子域的实现包之间不能调用（同层、跨层均禁止）。该约束由 `common-test` 的 ArchUnit 规则强制。
+- 子域间同步调用经由 `share/<子域>-contract` 模块的 `<子域>.contract` 契约包：契约以 `XxxFacade` 接口命名（DTO、领域事件同包），提供方在 `app` 层对应子域以 `XxxFacadeImpl` 实现，消费方只注入契约接口；契约包不得依赖任何 `app/port` 实现。`share/core` 只放跨业务共享领域类型，不承担子域契约。
 - `standalone-runner` 只依赖部署子模块，不承载业务代码。
-- `web` 只使用 Spring MVC；`common-web` 不依赖 Boot Starter、Tomcat 或 Jackson。`app` 只使用 Spring DI 相关类型和 Jakarta JPA 注解；具体 Web、数据访问和外部客户端实现不放入 `app`。
-- `app` 不引入 Hibernate、Spring Data JPA 等持久化实现，JPA Provider 与数据源由 `infra` 或部署侧配置。
-- 模块目录名必须与 `artifactId` 一致，业务子模块名称必须带业务前缀，例如 `ticket-web`。
-- 业务 `web/app/infra` 子模块继承对应业务聚合 POM，并分别依赖 `common-web`、`common-app`、`common-infra`；部署子模块继承 `business/deploy`。
-- 模块间依赖版本使用 `${project.version}`；Jakarta API 与 Spring 依赖均不显式声明版本，分别由 Jakarta EE BOM 和 Spring Boot BOM 管理。
+- `web` 只使用 Spring MVC；`common-web` 不依赖 Boot Starter、Tomcat 或 Jackson。Swagger 只引入 `swagger-annotations-jakarta` 注解包，文档运行时由 `standalone-runner` 的 `springdoc-openapi-starter-webmvc-ui` 提供，启动后访问 `/swagger-ui/index.html`（OpenAPI JSON 为 `/v3/api-docs`）。`app` 只使用 Spring DI 相关类型与通用应用层基类；具体 Web、数据访问和外部客户端实现不放入 `app`。
+- `app` 不引入持久化框架与具体实现，持久化 Provider 与数据源（如有）由 `port` 或部署侧配置。
+- 模块目录名必须与 `artifactId` 一致，业务子模块名称必须带业务前缀，例如 `ticket-port`。
+- 业务 `app/port` 子模块继承对应业务聚合 POM；`app` 依赖 `common-app`，`port` 依赖 `common-web`、`common-infra` 与 `app`；部署子模块继承 `business/deploy`。
+- 模块间依赖版本使用 `${project.version}`；Spring 等由 Spring Boot BOM 托管的依赖不显式声明版本，其余第三方依赖版本在根 POM `dependencyManagement` 统一管理。
 
 ### 代码归属
 
@@ -86,15 +89,15 @@ standalone-runner
 
 | 代码类型 | 模块 | 建议包名 |
 | --- | --- | --- |
-| Spring MVC Controller、DTO、assembler、MVC 配置 | `<域>-web` | `com.kacean.power.<子域>.web.{controller,dto,assembler,config}` |
-| 应用服务、command/query、领域模型（可使用 JPA 注解）、仓储接口 | `<域>-app` | `com.kacean.power.<子域>.app.{service,domain,repository}` |
+| Spring MVC Controller、DTO、assembler、MVC 配置 | `<域>-port` | `com.kacean.power.<子域>.port.web.{controller,dto,assembler,config}` |
+| 应用服务、command/query、领域模型（纯 Java）、仓储接口 | `<域>-app` | `com.kacean.power.<子域>.app.{service,domain,repository}` |
 | 子域间调用契约（Facade 接口、DTO、领域事件） | `share/<子域>-contract` | `com.kacean.power.<子域>.contract` |
 | 跨业务稳定共享领域类型 | `share/core` | `com.kacean.power.core.share` |
-| 仓储实现、外部客户端、持久化适配 | `<域>-infra` | `com.kacean.power.<子域>.infra.{persistence,client,config}` |
+| 仓储实现、外部客户端、持久化适配 | `<域>-port` | `com.kacean.power.<子域>.port.infra.{persistence,client,config}` |
 
-其中 `<子域>` 为业务子域名，全小写且全局唯一（如 `tickettype`），同一子域在 `web/app/infra` 三层使用相同的分包名；Maven 业务模块仍按业务域聚合（`ticket-web/app/infra`），包名不再包含业务域层级。跨子域调用示例：`ticketorder` 需要工单类型数据时，依赖 `share/tickettype-contract` 并注入 `tickettype.contract.TicketTypeFacade`，由 `tickettype/app` 的 `TicketTypeFacadeImpl` 提供实现，不直接 import `tickettype` 子域任何实现类。
+其中 `<子域>` 为业务子域名，全小写且全局唯一（如 `tickettype`），同一子域在 `app` 与 `port` 中使用相同的分包名；Maven 业务模块仍按业务域聚合（`ticket-app/port`），包名不再包含业务域层级。跨子域调用示例：`ticketorder` 需要工单类型数据时，依赖 `share/tickettype-contract` 并注入 `tickettype.contract.TicketTypeFacade`，由 `tickettype/app` 的 `TicketTypeFacadeImpl` 提供实现，不直接 import `tickettype` 子域任何实现类。
 
-### app 的 DI 与持久化注解
+### app 的 DI 与领域模型
 
 `app` 直接使用 Spring DI。应用服务使用 `@Service` 或 `@Component`，依赖注入优先使用构造器；单构造器场景不需要额外添加 `@Autowired`。
 
@@ -109,7 +112,7 @@ public class TicketApplicationService {
 }
 ```
 
-领域模型可以使用 `@Entity`、`@Id`、`@Table` 等 Jakarta Persistence 注解。`app` 不处理 MVC，也不引入具体持久化实现。
+领域模型为纯 Java 对象，不使用 `@Entity` 等持久化框架注解。`app` 不处理 MVC，也不引入具体持久化实现。
 
 ### 工具库版本管理
 
@@ -135,7 +138,7 @@ public class TicketApplicationService {
 </dependency>
 ```
 
-只使用单个工具时可以直接声明对应工具库；`commons-beanutils` 等低频工具不进入 `common-util`，确有需要时由使用方单独声明，版本仍由根 POM 管理。`common-util` 不被其他公共模块强制依赖，因此未使用工具集的模块不会携带这些工具库。`common-app` 的 Jakarta 依赖仅保留 Persistence API，不默认引入其他 Jakarta API。
+只使用单个工具时可以直接声明对应工具库；`commons-beanutils` 等低频工具不进入 `common-util`，确有需要时由使用方单独声明，版本仍由根 POM 管理。`common-util` 不被其他公共模块强制依赖，因此未使用工具集的模块不会携带这些工具库。
 
 ## 环境准备
 
@@ -180,6 +183,8 @@ runner/standalone-runner/src/main/java/com/kacean/power/PowerSystemApplication.j
 
 - 首页：<http://localhost:8080/>
 - 静态页面：<http://localhost:8080/index.html>
+- Swagger UI：<http://localhost:8080/swagger-ui.html>
+- OpenAPI JSON：<http://localhost:8080/v3/api-docs>
 
 本地 IDE 启动默认加载 jar 内的 `application.yml` 与 `classpath:conf/logback-spring.xml`。
 
@@ -253,6 +258,10 @@ conf/logback-spring.xml
 
 外置配置由启动脚本显式加载，优先于 jar 内配置。修改端口可调整 `server.port`，重启后生效。
 
+### 持久化
+
+`standalone-runner` 已引入 MyBatis-Plus Boot 4 Starter 和 MySQL 运行时驱动，数据源默认连接 `localhost:3306/power_system`，可通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 环境变量覆盖；真实密码不得写入配置仓库。`application.yml` 同时配置 Mapper XML 扫描、下划线转驼峰、`ASSIGN_ID` 主键策略和数值逻辑删除值；原 `MetaObjectHandler` 公共字段填充处理器依赖被清空的 `OperatorContext`，已随本轮重构一并移除，待重建。业务持久化应在对应 `port` 新增 PO、Mapper 与仓储适配，不改变 `app` 层仓储契约，也不使用 JPA。
+
 ### 静态资源
 
 静态资源加载顺序为：
@@ -284,11 +293,15 @@ spring:
 mvn test -pl business/deploy/ticket-deploy -am
 ```
 
-当前只保留以下 3 条全局规则：
+当前全局规则共 **7 条**（2 条分层依赖 + 2 条子域分包 + 3 条子域契约）：
 
-1. `app` 不依赖 `web` 或 `infra`。
-2. `web` 不依赖 `infra`。
-3. `infra` 不依赖 `web`。
+1. `app` 不依赖 `port`（web/infra）。
+2. `infra` 不依赖 `web`；**不禁止 `web` 直调 `infra`**（贫血阶段允许，是否经过 `app` 由业务复杂度决定）。
+3. 子域层根包必须按技术分包（`controller/service/domain` 等）。
+4. 不同子域的实现包之间不能调用。
+5. 契约包（`<子域>.contract`、`core.share`）不依赖业务分层实现。
+6. `XxxFacade` 接口只能定义在 `<子域>.contract`。
+7. `XxxFacadeImpl` 只能位于 app 层对应子域。
 
 `app` 的公共技术依赖集中在 `common-app`，不再增加额外注解位置或框架规则。
 
@@ -309,7 +322,7 @@ sh .agents/skills/power-system-build/scripts/verify.sh
 1. 执行 `mvn clean package`。
 2. 解压 ZIP 并启动应用。
 3. 断言启动日志包含 `Started PowerSystemApplication`。
-4. 断言 `/` 与 `/index.html` 均返回 HTTP 200。
+4. 断言 `/`、`/index.html`、Swagger UI 与 OpenAPI JSON 均返回 HTTP 200。
 5. 检查 `.logs/power-system.log`，随后停止应用并清理 `target/dist-verify`。
 
 默认使用 8080 端口。无论验证成功或失败，脚本都会清理本次启动的应用和临时目录。
@@ -318,14 +331,14 @@ sh .agents/skills/power-system-build/scripts/verify.sh
 
 以新增 `<域>` 为例：
 
-1. 在 `business/<域>/` 下创建 `<域>-web`、`<域>-app`、`<域>-infra` 三个子模块。
-2. 三个子模块的 parent 均为 `<域>` 业务聚合 POM，并正确配置 `relativePath`。
-3. 添加公共依赖：`<域>-web → common-web`、`<域>-app → common-app`、`<域>-infra → common-infra`；再添加业务依赖：`<域>-web → <域>-app`、`<域>-infra → <域>-app`。
-4. 在 `business/<域>/pom.xml` 聚合三个子模块，并在 `business/pom.xml` 注册新业务模块。
-5. 在 `business/deploy/` 下创建 `<域>-deploy`，组合该业务的 web/app/infra，并注册到 `business/deploy/pom.xml`。
+1. 在 `business/<域>/` 下创建 `<域>-app`、`<域>-port` 两个子模块。
+2. 两个子模块的 parent 均为 `<域>` 业务聚合 POM，并正确配置 `relativePath`。
+3. 添加公共依赖：`<域>-app → common-app`，`<域>-port → common-web、common-infra`；再添加业务依赖：`<域>-port → <域>-app`。
+4. 在 `business/<域>/pom.xml` 聚合两个子模块，并在 `business/pom.xml` 注册新业务模块。
+5. 在 `business/deploy/` 下创建 `<域>-deploy`，组合该业务的 app/port，并注册到 `business/deploy/pom.xml`。
 6. 在 `standalone-runner/pom.xml` 中添加对 `<域>-deploy` 的依赖。
 7. 如需执行全局架构规则，让 `<域>-deploy` 以 `test` scope 依赖 `common-test`，并添加显式声明 `@AnalyzeClasses` 的测试子类。
-8. `common-web` 只保留 `spring-webmvc`，`common-app` 只保留 Spring DI 与 Jakarta Persistence API，基础设施公共依赖放入 `common-infra`；需要多类高频工具时依赖 `common-util`，单个或低频工具由使用方直接声明。
+8. `common-web` 只保留 `spring-webmvc`、`common-app` 与 `swagger-annotations-jakarta`，`common-app` 只保留 Spring DI 与通用应用层基类，基础设施公共依赖放入 `common-infra`；需要多类高频工具时依赖 `common-util`，单个或低频工具由使用方直接声明。
 9. 只有稳定且确实跨业务共享的领域类型才放入 `share/core`；子域对外契约放 `share/<子域>-contract`，均由使用方显式依赖；不要将单一业务实现或普通工具类移入其中。
 
 ## 打包与脚本约定

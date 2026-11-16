@@ -24,4 +24,14 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <!-- 不写 version，也不写 annotationProcessorPaths -->
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

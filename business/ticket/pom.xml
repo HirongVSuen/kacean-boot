@@ -11,12 +11,11 @@
 
     <artifactId>ticket</artifactId>
     <packaging>pom</packaging>
-    <description>工单业务模块：聚合 web / app / infra 三个子模块</description>
+    <description>工单业务模块：聚合 app / port 两个子模块</description>
 
     <modules>
-        <module>ticket-web</module>
         <module>ticket-app</module>
-        <module>ticket-infra</module>
+        <module>ticket-port</module>
     </modules>
 
     <properties>
