@@ -1,6 +1,7 @@
-package com.kacean.power.common.infra.persistence;
+package com.kacean.power.common.infra.po;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
@@ -11,11 +12,12 @@ import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 /**
- * MyBatis-Plus 持久化对象基类测试，固定公共字段默认值与映射注解契约。
+ * MyBatis-Plus 持久化对象基类测试，固定公共字段默认值、映射注解与相等性边界契约。
  *
  * @author kacean-agent
  */
@@ -33,8 +35,19 @@ class BaseEntityTest {
     }
 
     @Test
+    void 不同持久化对象_公共字段相同也不因基类判定相等() {
+        assertNotEquals(new TestEntity("A"), new TestEntity("B"));
+    }
+
+    @Test
     void 公共字段_MyBatisPlus注解与填充策略符合约定() throws NoSuchFieldException {
-        assertNull(field("id").getAnnotation(TableId.class));
+        Field idField = field("id");
+        TableId tableId = idField.getAnnotation(TableId.class);
+        assertNotNull(tableId);
+        assertAll(
+                () -> assertEquals(Long.class, idField.getType()),
+                () -> assertEquals("id", tableId.value()),
+                () -> assertEquals(IdType.ASSIGN_ID, tableId.type()));
 
         TableField externalNo = tableField("externalNo");
         assertEquals("external_no", externalNo.value());
@@ -74,5 +87,15 @@ class BaseEntityTest {
     private static final class TestEntity extends BaseEntity {
 
         private static final long serialVersionUID = 1L;
+
+        private final String name;
+
+        private TestEntity() {
+            this(null);
+        }
+
+        private TestEntity(String name) {
+            this.name = name;
+        }
     }
 }

@@ -34,9 +34,11 @@ description: power-system 项目包、类、方法命名规范。新建/重命�
 | --- | --- |
 | `port.web` | `controller`、`dto`、`assembler`、`config` |
 | `app` | `service`、`domain`、`repository` |
-| `port.infra` | `persistence`、`client`、`config` |
+| `port.infra` | `persistence`（固定含 `po`、`mapper`）、`dao`、`repo`、`struct`、`query`、`client`、`config` |
 
 `app/service` 内默认直接建 `XxxService` 作为用例入口；复杂用例类放 `usecase` 子包，`FacadeImpl` 契约实现放 `facade` 子包；**禁止将实现子包命名为 `contract`**（ArchUnit 按 `..contract..` 识别契约包，会误伤实现的依赖规则）。没有对应代码时不建空子包。应用层角色、调用方向与开发步骤见 `power-system-app`，契约模块见 `power-system-share`。
+
+层内技术分包与 common-infra 公共包（`po`/`dao`/`mapper`/`query`/`repo`/`struct`/`curd`）语义对齐：`persistence.po` 放继承 `infra.po.BaseEntity` 的 `XxxPO`，`persistence.mapper` 放继承 `infra.mapper.BaseMapper` 的 MyBatis Mapper（两者是代码生成器固定输出位置）；业务 DAO 放 `dao`，仓储实现放 `repo`，MapStruct 转换放 `struct`，查询条件构建放 `query`。ArchUnit 只强制层根包不直接建类，具体技术分包以本表为准。
 
 ArchUnit 已强制：层根包不得直接建类、不同子域实现包不能互相调用（对方 `contract` 契约包除外）、`XxxFacade` 只能在 `<子域>.contract`、`XxxFacadeImpl` 只能在 app 子域。port 内 **web 可直接调用 infra**（贫血阶段简单 CRUD 不强制经过 app），但 infra 不得依赖 web、app 不得依赖 port。命名时主动遵守，不要等测试报错。
 
@@ -52,7 +54,12 @@ ArchUnit 已强制：层根包不得直接建类、不同子域实现包不能�
 | 值对象 | 名词，优先 `record` 不可变 | `TicketState`、`TransitionTable` |
 | 标识值对象 | `XxxId` | `TicketTypeId` |
 | 仓储接口 | `XxxRepository`，放 `<子域>.app.repository` | `TicketTypeRepository` |
-| 仓储实现 | 技术前缀 + 接口名，放 `port.infra` | `InMemoryTicketTypeRepository` |
+| 仓储实现 | 技术前缀 + 接口名，放 `port.infra.repo`；MyBatis-Plus 实现继承 common-infra `BaseRepositoryImpl`，构造器注入 DAO 与转换器 | `MyBatisTicketTypeRepository`、`InMemoryTicketTypeRepository` |
+| 持久化对象 | `XxxPO`，继承 common-infra `infra.po.BaseEntity`，只放 `port.infra.persistence.po`，公共字段不重复声明 | `TicketTypePO` |
+| MyBatis Mapper | `XxxMapper`，继承 common-infra `infra.mapper.BaseMapper`，放 `port.infra.persistence.mapper` | `TicketTypeMapper` |
+| DAO | `XxxDao` 接口继承 `BaseDao`、`XxxDaoImpl` 继承 `BaseDaoImpl`，放 `port.infra.dao` | `TicketTypeDao` / `TicketTypeDaoImpl` |
+| 领域 ↔ PO 转换 | `XxxStructMapper`（MapStruct，继承 common-infra `StructMapper` 并加 `@Mapper`），放 `port.infra.struct`；与 MyBatis `XxxMapper` 严格区分 | `TicketTypeStructMapper` |
+| 查询参数 / 条件 | `XxxQueryParam`（record，实现 common-app `Query`）；`XxxQueryConditionBuilder` 继承 `QueryConditionBuilder`，`XxxQueryParamStruct` 实现 `QueryParamStruct` 负责转换 | `TicketTypeQueryParam` |
 | 子域间同步契约 | `XxxFacade` 接口（`<子域>.contract`）+ `XxxFacadeImpl` 实现（`<子域>.app.service.facade`） | `TicketTypeFacade` / `TicketTypeFacadeImpl` |
 | 契约 DTO / 视图 | `XxxView`（跨子域只读视图），不放领域实体 | `TicketTypeView` |
 | 领域事件 | `XxxEvent`，过去式业务事实 | `TicketTypeDisabledEvent` |

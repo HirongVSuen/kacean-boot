@@ -15,7 +15,7 @@ description: power-system 的 MyBatis-Plus 开发期代码生成与业务模块�
    - 子域：全局唯一的全小写 Java 包名，如 `tickettype`。
    - 输出根包：`com.kacean.power.<subdomain>.port.infra.persistence`。
 3. 默认只生成 `PO / Mapper / Mapper XML`，禁用 MyBatis-Plus 的 Service 和 Controller 模板。
-4. PO 带持久化注解，只能进入 `port.infra.persistence.po`。不得污染 `app.domain`；需要领域对象或仓储适配时，再按 `power-system-app` 单独实现纯 Java 对象与转换。
+4. PO 带持久化注解，只能进入 `port.infra.persistence.po`，并固定继承 `common-infra` 的持久化 `BaseEntity`。公共列不重复生成，示例建表规范见 `common/common-infra/README.md`。不得污染 `app.domain`；需要领域对象或仓储适配时，再按 `power-system-app` 单独实现纯 Java 对象与转换。
 5. 默认保留已有同名文件。只有用户明确同意覆盖后才传 `--overwrite`；执行前先检查未提交修改。
 6. 数据库密码只从环境变量读取，默认变量为 `CODEGEN_DB_PASSWORD`。不得把密码写入命令参数、Skill、日志或仓库文件。
 7. 不自动修改数据库，不执行 DDL/DML，不自动生成测试数据。
@@ -73,10 +73,7 @@ bash .agents/skills/power-system-codegen/scripts/generate.sh generate \
   --subdomain assetdevice \
   --jdbc-url 'jdbc:mysql://localhost:3306/power_system' \
   --username root \
-  --tables asset_device \
-  --id-type ASSIGN_UUID \
-  --logic-delete-column deleted \
-  --version-column version
+  --tables asset_device
 ```
 
 `module` 是可选步骤：目标 `<business>-port` 已存在时禁止重复创建，直接执行 `generate`。已有目录或部署目录存在时，脚手架会拒绝覆盖。
@@ -99,9 +96,6 @@ bash .agents/skills/power-system-codegen/scripts/generate.sh help
 | `--password-env` | 否 | 密码环境变量名，默认 `CODEGEN_DB_PASSWORD` |
 | `--schema` | 否 | 数据库 schema；PostgreSQL 等需要时指定 |
 | `--table-prefix` | 否 | 类名中移除的表前缀，英文逗号分隔 |
-| `--id-type` | 否 | `AUTO / INPUT / ASSIGN_ID / ASSIGN_UUID / NONE`；留空按数据库识别 |
-| `--logic-delete-column` | 否 | 逻辑删除列，默认 `deleted`；`none` 禁用 |
-| `--version-column` | 否 | 乐观锁列，默认 `version`；`none` 禁用 |
 | `--overwrite` | 否 | 覆盖 PO/Mapper/XML 同名文件；默认不覆盖 |
 | `--project-root` | 否 | 项目根目录，默认当前目录 |
 
@@ -111,7 +105,7 @@ bash .agents/skills/power-system-codegen/scripts/generate.sh help
 
 ```text
 business/ticket/ticket-port/
-├── pom.xml                         # 缺少时自动补充 mybatis-plus-core
+├── pom.xml                         # 缺少时自动补充 common-infra 与 mybatis-plus-core
 └── src/main/
     ├── java/com/kacean/power/tickettype/port/infra/persistence/
     │   ├── po/TicketTypePO.java
@@ -119,8 +113,8 @@ business/ticket/ticket-port/
     └── resources/mapper/tickettype/TicketTypeMapper.xml
 ```
 
-- `mybatis-plus-core` 只提供 PO 注解、`BaseMapper` 与 MyBatis 编译 API；生成器不会擅自引入数据源或启动数据库。
-- 主键、逻辑删除、乐观锁注解只有在对应列存在且策略匹配时才生成。
+- `common-infra` 提供 PO 固定继承的 `infra.po.BaseEntity` 与 Mapper 固定继承的 `infra.mapper.BaseMapper`，`mybatis-plus-core` 提供 PO 注解与 MyBatis 编译 API；生成器不会擅自引入数据源或启动数据库。
+- 主键固定为 `Long + ASSIGN_ID`，`id/external_no/deleted/create_at/create_by/modify_at/modify_by/version` 由 `BaseEntity` 统一映射，不在子类重复生成；目标表必须预先包含这些公共列。
 - 表注释、字段注释进入中文 Javadoc，类作者固定为 `kacean-agent`。
 - XML 使用独立资源目录，不把 XML 混进 Java 包。
 
@@ -137,7 +131,7 @@ mvn -pl business/deploy/<business>-deploy -am test
 ```
 
 5. 如果还要连接真实数据库运行，按 [references/runtime-setup.md](references/runtime-setup.md) 单独配置 Starter、驱动、数据源和 Mapper XML 扫描。代码生成成功不等于运行时已接入数据库。
-6. 如果要补应用服务、Facade、Repository 适配或 Controller，切换对应 Skill，不要重新打开 MyBatis-Plus 的 Service/Controller 模板。
+6. 如果要补 DAO、仓储适配、应用服务、Facade 或 Controller，切换对应 Skill：DAO/仓储优先继承 common-infra 的 `BaseDao`/`BaseDaoImpl`/`BaseRepositoryImpl` 并配合 `StructMapper`（见 [references/runtime-setup.md](references/runtime-setup.md)），不要重新打开 MyBatis-Plus 的 Service/Controller 模板。
 
 ## 排错
 

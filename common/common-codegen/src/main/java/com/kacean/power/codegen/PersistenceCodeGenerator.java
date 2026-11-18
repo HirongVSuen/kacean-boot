@@ -1,6 +1,5 @@
 package com.kacean.power.codegen;
 
-import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.generator.FastAutoGenerator;
 import com.baomidou.mybatisplus.generator.config.DataSourceConfig;
 import com.baomidou.mybatisplus.generator.config.OutputFile;
@@ -27,6 +26,10 @@ final class PersistenceCodeGenerator {
     private static final Pattern SUBDOMAIN_PATTERN = Pattern.compile("[a-z][a-z0-9]*");
     private static final Pattern TABLE_PATTERN = Pattern.compile("[A-Za-z0-9_]+");
     private static final Pattern COLUMN_PATTERN = Pattern.compile("[A-Za-z0-9_]*");
+    private static final String BASE_ENTITY_CLASS = "com.kacean.power.common.infra.po.BaseEntity";
+    private static final String BASE_MAPPER_CLASS = "com.kacean.power.common.infra.mapper.BaseMapper";
+    private static final List<String> BASE_ENTITY_COLUMNS = List.of(
+            "id", "external_no", "deleted", "create_at", "create_by", "modify_at", "modify_by", "version");
 
     private PersistenceCodeGenerator() {
     }
@@ -76,23 +79,17 @@ final class PersistenceCodeGenerator {
                     Entity.Builder entity = builder.entityBuilder()
                             .formatFileName("%sPO")
                             .javaTemplate("/templates/persistence-po.java")
+                            .superClass(BASE_ENTITY_CLASS)
+                            .addSuperEntityColumns(BASE_ENTITY_COLUMNS)
                             .disableSerialVersionUID()
                             .enableRemoveIsPrefix()
                             .enableTableFieldAnnotation();
-                    if (!options.idType().isBlank()) {
-                        entity.idType(parseIdType(options.idType()));
-                    }
-                    if (!options.logicDeleteColumn().isBlank()) {
-                        entity.logicDeleteColumnName(options.logicDeleteColumn());
-                    }
-                    if (!options.versionColumn().isBlank()) {
-                        entity.versionColumnName(options.versionColumn());
-                    }
                     if (options.overwrite()) {
                         entity.enableFileOverride();
                     }
 
                     Mapper.Builder mapper = builder.mapperBuilder()
+                            .superClass(BASE_MAPPER_CLASS)
                             .mapperAnnotation(org.apache.ibatis.annotations.Mapper.class)
                             .mapperTemplate("/templates/persistence-mapper.java")
                             .mapperXmlTemplate("/templates/persistence-mapper.xml")
@@ -107,39 +104,43 @@ final class PersistenceCodeGenerator {
                 .templateEngine(new FreemarkerTemplateEngine())
                 .execute();
 
-        ensureMyBatisPlusDependency(portPom);
+        ensurePersistenceDependencies(portPom);
     }
 
-    private static IdType parseIdType(String value) {
-        try {
-            return IdType.valueOf(value.trim().toUpperCase());
-        } catch (IllegalArgumentException exception) {
-            throw new IllegalArgumentException("不支持的主键策略 " + value + "，可选 AUTO、INPUT、ASSIGN_ID、ASSIGN_UUID、NONE");
-        }
-    }
-
-    private static void ensureMyBatisPlusDependency(Path portPom) {
+    private static void ensurePersistenceDependencies(Path portPom) {
         try {
             String content = Files.readString(portPom);
-            if (content.contains("<artifactId>mybatis-plus-core</artifactId>")) {
-                return;
-            }
-            String marker = "    </dependencies>";
-            if (!content.contains(marker)) {
-                throw new IllegalArgumentException("目标 port POM 缺少 dependencies 结束标记：" + portPom);
-            }
-            String dependency = """
+            content = addDependencyIfAbsent(content, "common-infra", """
+                        <!-- BaseEntity：由代码生成器补充 -->
+                        <dependency>
+                            <groupId>com.kacean.power</groupId>
+                            <artifactId>common-infra</artifactId>
+                            <version>${project.version}</version>
+                        </dependency>
+                    """.stripTrailing());
+            content = addDependencyIfAbsent(content, "mybatis-plus-core", """
                         <!-- MyBatis-Plus PO 与 Mapper：由代码生成器补充 -->
                         <dependency>
                             <groupId>com.baomidou</groupId>
                             <artifactId>mybatis-plus-core</artifactId>
                         </dependency>
-                    """.stripTrailing();
-            String newline = content.contains("\r\n") ? "\r\n" : "\n";
-            Files.writeString(portPom, content.replace(marker, dependency + newline + marker));
+                    """.stripTrailing());
+            Files.writeString(portPom, content);
         } catch (IOException exception) {
             throw new IllegalStateException("更新目标 port POM 失败：" + portPom, exception);
         }
+    }
+
+    private static String addDependencyIfAbsent(String content, String artifactId, String dependency) {
+        if (content.contains("<artifactId>" + artifactId + "</artifactId>")) {
+            return content;
+        }
+        String marker = "    </dependencies>";
+        if (!content.contains(marker)) {
+            throw new IllegalArgumentException("目标 port POM 缺少 dependencies 结束标记");
+        }
+        String newline = content.contains("\r\n") ? "\r\n" : "\n";
+        return content.replace(marker, dependency + newline + marker);
     }
 
     private static void validate(Options options) {
@@ -153,11 +154,6 @@ final class PersistenceCodeGenerator {
         }
         options.tables().forEach(table -> requirePattern(table, TABLE_PATTERN, "表名"));
         options.tablePrefixes().forEach(prefix -> requirePattern(prefix, COLUMN_PATTERN, "表前缀"));
-        requirePattern(options.logicDeleteColumn(), COLUMN_PATTERN, "逻辑删除列");
-        requirePattern(options.versionColumn(), COLUMN_PATTERN, "乐观锁列");
-        if (!options.idType().isBlank()) {
-            parseIdType(options.idType());
-        }
     }
 
     private static void requirePattern(String value, Pattern pattern, String label) {
@@ -179,14 +175,10 @@ final class PersistenceCodeGenerator {
      * @param schema 可选数据库 schema
      * @param tables 要生成的表名
      * @param tablePrefixes 生成类名时移除的表前缀
-     * @param idType 可选 MyBatis-Plus 主键策略
-     * @param logicDeleteColumn 逻辑删除列，空字符串表示不启用
-     * @param versionColumn 乐观锁列，空字符串表示不启用
      * @param overwrite 是否覆盖已有同名文件
      */
     record Options(Path projectRoot, String businessDomain, String subdomain, String jdbcUrl, String username,
-                   String password, String schema, List<String> tables, List<String> tablePrefixes, String idType,
-                   String logicDeleteColumn, String versionColumn, boolean overwrite) {
+                   String password, String schema, List<String> tables, List<String> tablePrefixes, boolean overwrite) {
         Options {
             tables = List.copyOf(tables);
             tablePrefixes = List.copyOf(tablePrefixes);

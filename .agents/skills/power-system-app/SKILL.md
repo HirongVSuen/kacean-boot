@@ -33,7 +33,7 @@ com.kacean.power.<子域>.app
 | 应用服务 `TicketTypeService` | `service` | `@Service` | 默认用例入口，编排「校验 → 领域对象 → 仓储」；复杂用例委托 `usecase` |
 | 复杂用例 `DefineTicketType` | `service/usecase` | `@Service` | 仅复杂用例：独立编排与校验，由应用服务调用 |
 | 契约实现 `TicketTypeFacadeImpl` | `service/facade` | `@Service` | `XxxView` ↔ 领域对象转换并委托应用服务，不承载业务规则 |
-| 仓储接口 `TicketTypeRepository` | `repository` | 无 | 只定义持久化抽象，实现放 `port.infra` |
+| 仓储接口 `TicketTypeRepository` | `repository` | 无 | 只定义持久化抽象，可继承 common-app `BaseRepository<D>` 复用最小读写；实现放 `port.infra` |
 | 领域对象 | `domain` | 无 | 纯 Java，不依赖 Spring、Web、持久化 |
 
 ## 3. 调用方向
@@ -56,7 +56,7 @@ facade 实现 ────┘        └──────────（常规�
 1. 阅读 `docs/domain/glossary.md`，新领域概念同步术语表。
 2. 默认在 `service` 的 `XxxService` 中增加用例方法（业务复杂度足够时），方法名与用例对应（`define` / `revise` / `disable`）；按标识查询用 `findById` 返回 `Optional`，必须存在用 `getRequired...`。简单 CRUD 可不建应用服务，由 web 直调 infra。
 3. 用例复杂时再抽 `service/usecase` 动词类，`XxxService` 保持编排入口；不要按行数机械拆分。
-4. 需要保存时在 `repository` 定义接口，由 `port.infra` 提供实现；app 不出现具体持久化技术。
+4. 需要保存时在 `repository` 定义接口，由 `port.infra` 提供实现；app 不出现具体持久化技术。通用读写可继承 common-app 的 `BaseRepository<D>`（`findById`/`findByIds`/`save`/`saveAll`/`deleteById`/`deleteByIds`），标识使用 `ID`（`id` 主键与 `code` 外部编号二选一）与 `IDCollection`（去重后最多 1000 个标识），批量写不默认保证原子性；infra 侧继承 `BaseRepositoryImpl` 并注入 `BaseDao` 与 `StructMapper` 即可落地，基类清单见 `power-system-build` 与 `common/common-infra/README.md`。分页查询不进通用接口，由业务仓储按自身条件声明，复用 `PageQuery`/`Query`/`PageResult`/`Sort` 等 common-app 查询模型；业务查询参数实现 `Query`（提供默认关键字与排序访问，业务过滤字段自行声明，推荐 record），由 infra 的 `QueryParamStruct` 转换为 `QueryConditionBuilder`。
 5. 出现真实跨子域调用时，按 `power-system-share` 定义或消费契约，提供方在 `service/facade` 实现 `XxxFacadeImpl`。
 6. 测试使用纯 JUnit + 测试内 fake 仓储（app 测试不依赖 port）；测试方法中文描述与需求场景对应。
 7. 验证：`mvn -pl business/deploy/ticket-deploy -am test`，再按需执行全量 `mvn test`。

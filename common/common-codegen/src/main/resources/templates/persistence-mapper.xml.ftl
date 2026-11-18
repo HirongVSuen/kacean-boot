@@ -5,16 +5,17 @@
 <#if baseResultMap>
     <!-- 通用查询映射结果 -->
     <resultMap id="BaseResultMap" type="${package.Entity}.${entity}">
+<#list table.commonFields as field>
+<#if field.keyFlag>
+        <id column="${field.name}" property="${field.propertyName}" />
+<#else>
+        <result column="${field.name}" property="${field.propertyName}" />
+</#if>
+</#list>
 <#list table.fields as field>
 <#if field.keyFlag>
         <id column="${field.name}" property="${field.propertyName}" />
-</#if>
-</#list>
-<#list table.commonFields as field>
-        <result column="${field.name}" property="${field.propertyName}" />
-</#list>
-<#list table.fields as field>
-<#if !field.keyFlag>
+<#else>
         <result column="${field.name}" property="${field.propertyName}" />
 </#if>
 </#list>

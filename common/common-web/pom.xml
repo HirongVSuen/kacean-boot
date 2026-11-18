@@ -23,16 +23,18 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
+            <scope>provided</scope>
         </dependency>
         <!-- Swagger 注解：@Operation/@Parameter/@Schema 等，仅注解包，文档运行时由 runner 的 springdoc 提供 -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations-jakarta</artifactId>
+            <scope>provided</scope>
         </dependency>
-        <!-- 通用 MVC 基类 BaseController 调用 common-app 的 BaseService、PageQuery 等应用层公共类型 -->
+        <!-- common-app 提供 ID、PageQuery/PageResult 等应用层公共类型，供通用 MVC 能力按需使用；BaseController 当前为空基类，不调用应用服务 -->
         <dependency>
             <groupId>com.kacean.power</groupId>
-            <artifactId>common-app</artifactId>
+            <artifactId>common-infra</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>

@@ -32,14 +32,7 @@ class PersistenceCodeGeneratorTest {
         String jdbcUrl = createDatabase();
         try (Connection connection = DriverManager.getConnection(jdbcUrl, "sa", "");
              Statement statement = connection.createStatement()) {
-            statement.execute("""
-                    create table ticket_type (
-                        id varchar(36) primary key,
-                        type_name varchar(64) not null,
-                        version bigint,
-                        deleted boolean
-                    )
-                    """);
+            createTicketTypeTable(statement);
         }
 
         PersistenceCodeGenerator.generate(options(jdbcUrl, false));
@@ -53,26 +46,38 @@ class PersistenceCodeGeneratorTest {
         assertTrue(Files.isRegularFile(xml));
 
         String poSource = Files.readString(po);
-        assertTrue(poSource.contains("public class TicketTypePO"));
+        assertTrue(poSource.contains("import com.kacean.power.common.infra.po.BaseEntity;"));
+        assertTrue(poSource.contains("public class TicketTypePO extends BaseEntity"));
         assertTrue(poSource.contains("@TableName(\"ticket_type\")"));
-        assertTrue(poSource.contains("IdType.ASSIGN_UUID"));
-        assertTrue(poSource.contains("@Version"));
-        assertTrue(poSource.contains("@TableLogic"));
+        assertTrue(poSource.contains("private String typeName;"));
         assertTrue(poSource.contains("@author kacean-agent"));
+        assertCommonFieldsInherited(poSource);
+        assertFalse(poSource.contains("@TableId"));
+        assertFalse(poSource.contains("IdType."));
+        assertFalse(poSource.contains("@Version"));
+        assertFalse(poSource.contains("@TableLogic"));
 
         String mapperSource = Files.readString(mapper);
         assertTrue(mapperSource.contains("package com.kacean.power.tickettype.port.infra.persistence.mapper;"));
         assertTrue(mapperSource.contains("import com.kacean.power.tickettype.port.infra.persistence.po.TicketTypePO;"));
+        assertTrue(mapperSource.contains("import com.kacean.power.common.infra.mapper.BaseMapper;"));
         assertTrue(mapperSource.contains("public interface TicketTypeMapper extends BaseMapper<TicketTypePO>"));
         assertTrue(mapperSource.contains("@Mapper"));
-        assertTrue(Files.readString(xml).contains(
+        String xmlSource = Files.readString(xml);
+        assertTrue(xmlSource.contains(
                 "namespace=\"com.kacean.power.tickettype.port.infra.persistence.mapper.TicketTypeMapper\""));
+        assertTrue(xmlSource.contains("<id column=\"id\" property=\"id\" />"));
+        for (String column : List.of("external_no", "deleted", "create_at", "create_by",
+                "modify_at", "modify_by", "version", "type_name")) {
+            assertTrue(xmlSource.contains("column=\"" + column + "\""), "XML 缺少字段映射：" + column);
+        }
 
         assertFalse(Files.exists(projectRoot.resolve(
                 "business/ticket/ticket-app/src/main/java/com/kacean/power/tickettype/app/domain/TicketTypePO.java")));
         assertFalse(Files.exists(projectRoot.resolve(
                 "business/ticket/ticket-port/src/main/java/com/kacean/power/tickettype/port/web")));
         String portPom = Files.readString(projectRoot.resolve("business/ticket/ticket-port/pom.xml"));
+        assertEquals(1, occurrences(portPom, "<artifactId>common-infra</artifactId>"));
         assertEquals(1, occurrences(portPom, "<artifactId>mybatis-plus-core</artifactId>"));
     }
 
@@ -82,7 +87,7 @@ class PersistenceCodeGeneratorTest {
         String jdbcUrl = createDatabase();
         try (Connection connection = DriverManager.getConnection(jdbcUrl, "sa", "");
              Statement statement = connection.createStatement()) {
-            statement.execute("create table ticket_type (id varchar(36) primary key, version bigint, deleted boolean)");
+            createTicketTypeTable(statement);
         }
         PersistenceCodeGenerator.generate(options(jdbcUrl, false));
         Path po = generatedPo();
@@ -92,17 +97,43 @@ class PersistenceCodeGeneratorTest {
 
         assertEquals("保留手工修改\n", Files.readString(po));
         String portPom = Files.readString(projectRoot.resolve("business/ticket/ticket-port/pom.xml"));
+        assertEquals(1, occurrences(portPom, "<artifactId>common-infra</artifactId>"));
         assertEquals(1, occurrences(portPom, "<artifactId>mybatis-plus-core</artifactId>"));
 
         PersistenceCodeGenerator.generate(options(jdbcUrl, true));
-        assertTrue(Files.readString(po).contains("public class TicketTypePO"));
-        assertEquals(1, occurrences(Files.readString(projectRoot.resolve("business/ticket/ticket-port/pom.xml")),
-                "<artifactId>mybatis-plus-core</artifactId>"));
+        assertTrue(Files.readString(po).contains("public class TicketTypePO extends BaseEntity"));
+        portPom = Files.readString(projectRoot.resolve("business/ticket/ticket-port/pom.xml"));
+        assertEquals(1, occurrences(portPom, "<artifactId>common-infra</artifactId>"));
+        assertEquals(1, occurrences(portPom, "<artifactId>mybatis-plus-core</artifactId>"));
+    }
+
+    private void createTicketTypeTable(Statement statement) throws Exception {
+        statement.execute("""
+                create table ticket_type (
+                    id bigint primary key,
+                    external_no varchar(40) not null,
+                    deleted integer not null default 0,
+                    create_at timestamp(3) not null,
+                    create_by varchar(64) not null,
+                    modify_at timestamp(3) not null,
+                    modify_by varchar(64) not null,
+                    version bigint not null default 0,
+                    type_name varchar(64) not null
+                )
+                """);
     }
 
     private PersistenceCodeGenerator.Options options(String jdbcUrl, boolean overwrite) {
         return new PersistenceCodeGenerator.Options(projectRoot, "ticket", "tickettype", jdbcUrl, "sa", "", "",
-                List.of("ticket_type"), List.of(), "ASSIGN_UUID", "deleted", "version", overwrite);
+                List.of("ticket_type"), List.of(), overwrite);
+    }
+
+    private void assertCommonFieldsInherited(String poSource) {
+        for (String property : List.of("id", "externalNo", "deleted", "createAt", "createBy",
+                "modifyAt", "modifyBy", "version")) {
+            assertFalse(poSource.matches("(?s).*\\bprivate\\s+\\S+\\s+" + property + "\\s*;.*"),
+                    "公共字段不应重复生成：" + property);
+        }
     }
 
     private Path generatedPo() {

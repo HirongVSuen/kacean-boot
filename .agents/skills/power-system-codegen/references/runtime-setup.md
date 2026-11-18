@@ -8,10 +8,17 @@
 
 ```xml
 <dependency>
+    <groupId>com.kacean.power</groupId>
+    <artifactId>common-infra</artifactId>
+    <version>${project.version}</version>
+</dependency>
+<dependency>
     <groupId>com.baomidou</groupId>
     <artifactId>mybatis-plus-core</artifactId>
 </dependency>
 ```
+
+`common-infra` 提供 PO 固定继承的 `BaseEntity`；公共字段及其 DDL 规范见 `common/common-infra/README.md`。
 
 `standalone-runner` 已添加 Spring Boot 4 对应的 Starter 和 MySQL 驱动：
 
@@ -51,18 +58,18 @@ export DB_PASSWORD='实际密码'
 
 ## 3. 公共字段填充
 
-`standalone-runner` 的 `com.kacean.power.config.MyBatisPlusMetaObjectHandler` 已提供公共字段填充：
+`BaseEntity` 的外部编号与审计字段声明了 `FieldFill`，需要运行模块提供 `MetaObjectHandler` 才会自动赋值；当前 `standalone-runner` 尚未提供该处理器，也不存在 `OperatorContext`。接入真实数据库时应在 runner 的 `com.kacean.power.config` 新增 `MyBatisPlusMetaObjectHandler` 组件，建议规则：
 
 - `externalNo` 插入时使用带连字符的标准 UUID（36 字符），已有值不覆盖。
 - 插入时初始化 `deleted = 0`、`version = 0` 以及创建、修改审计字段。
-- 创建人、修改人取自 `OperatorContext`，未设置时使用 `system`。
+- 创建人、修改人取自运行侧操作人上下文（后续引入），未设置时使用 `system`。
 - 更新时只刷新 `modifyAt` 和 `modifyBy`。
 
-处理器作为 Spring 组件由 MyBatis-Plus 调用；Starter 与数据源由 runner 统一配置，但只有实际执行对应 insert/update SQL 时才会触发填充。
+处理器作为 Spring 组件由 MyBatis-Plus 调用，只有实际执行对应 insert/update SQL 时才会触发填充。
 
 ## 4. 逻辑删除与乐观锁
 
-生成器只在指定列存在时添加 `@TableLogic` / `@Version`。逻辑删除值必须与数据库列类型一致，例如数值列可配置：
+`@TableId`、`@TableLogic` 与 `@Version` 统一声明在 `BaseEntity`，生成器不会在业务 PO 中重复生成。逻辑删除值必须与公共 DDL 的数值列类型一致：
 
 ```yaml
 mybatis-plus:
@@ -72,14 +79,15 @@ mybatis-plus:
       logic-not-delete-value: 0
 ```
 
-如果 `deleted` 是 `BOOLEAN`，不要盲目使用上述数值配置，应按数据库方言和字段映射验证。乐观锁需要 MyBatis-Plus 拦截器配置才能完整生效；生成 `@Version` 本身不等于自动配置了全部运行时插件。
+`deleted` 固定使用 `0 / 1`。乐观锁需要 MyBatis-Plus 拦截器配置才能完整生效；`BaseEntity` 声明 `@Version` 本身不等于自动配置了全部运行时插件。
 
 ## 5. 领域与持久化转换
 
-PO 是基础设施对象，不是 `app.domain` 领域对象。需要 Repository 适配时：
+PO 是基础设施对象，不是 `app.domain` 领域对象。需要 Repository 适配时优先复用 common-infra 基类：
 
-1. 在对应 `app` 定义领域对象与仓储接口。
-2. 在同子域 `port.infra.persistence` 实现适配器。
-3. 显式完成 PO ↔ 领域对象转换，不把 PO 泄漏到 Web 或其他子域。
-4. 按 `power-system-app` 和 `power-system-naming` 完成命名与依赖检查。
-5. 在对应 `<business>-deploy` 运行架构测试与集成测试。
+1. 在对应 `app` 定义领域对象与仓储接口；通用读写可继承 common-app `BaseRepository<D>`，标识使用 `ID`/`IDCollection`（`id` 主键与 `code` 外部编号二选一，批量标识去重后最多 1000 个）。
+2. 业务 DAO 接口继承 `infra.dao.BaseDao`，实现继承 `BaseDaoImpl` 并构造器注入生成的 `XxxMapper`（其父接口为 common-infra `BaseMapper`）；特有查询通过 `getBaseMapper()` 使用 `QueryWrapper`/`LambdaQueryWrapper`。
+3. 在 `port.infra.struct` 定义 MapStruct 转换接口，继承 `StructMapper<领域, PO>` 并加 `@Mapper`，显式完成 PO ↔ 领域对象转换，不把 PO 泄漏到 Web 或其他子域。
+4. 仓储实现继承 `infra.repo.BaseRepositoryImpl`，构造器注入 DAO 与转换器，保存后自动回写主键与版本号；特有查询用受保护的 `baseDao()`/`structMapper()` 扩展，查询条件可配合 `QueryConditionBuilder` 与 `QueryParamStruct`（把 app 的 `Query` 实现转为构建器）。
+5. 批量写不默认保证原子性，需要整体提交或回滚时由调用方建立事务边界。
+6. 按 `power-system-app` 和 `power-system-naming` 完成命名与依赖检查，在对应 `<business>-deploy` 运行架构测试与集成测试。

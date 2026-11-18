@@ -27,7 +27,7 @@ public final class CodeGeneratorApplication {
     private static final Set<String> MODULE_OPTIONS = Set.of("business", "subdomain");
     private static final Set<String> GENERATE_OPTIONS = Set.of(
             "business", "subdomain", "jdbc-url", "username", "password-env", "schema", "tables",
-            "table-prefix", "id-type", "logic-delete-column", "version-column", "overwrite");
+            "table-prefix", "overwrite");
 
     private final BufferedReader input;
     private final PrintStream output;
@@ -106,9 +106,6 @@ public final class CodeGeneratorApplication {
                 String schema = prompt("数据库 schema（不需要时留空）", "");
                 String tables = prompt("表名，多个表使用英文逗号分隔", "");
                 String tablePrefix = prompt("表前缀，多个前缀使用英文逗号分隔（可留空）", "");
-                String idType = prompt("主键策略 AUTO/INPUT/ASSIGN_ID/ASSIGN_UUID/NONE（留空则按数据库识别）", "");
-                String logicDeleteColumn = prompt("逻辑删除列，输入 none 表示不启用", "deleted");
-                String versionColumn = prompt("乐观锁列，输入 none 表示不启用", "version");
                 boolean overwrite = confirm("覆盖已存在的同名文件", false);
                 output.printf("目标模块：business/%s/%s-port，子域包：com.kacean.power.%s。%n",
                         business, business, subdomain);
@@ -116,8 +113,7 @@ public final class CodeGeneratorApplication {
                 if (confirm("确认生成", true)) {
                     PersistenceCodeGenerator.generate(new PersistenceCodeGenerator.Options(
                             projectRoot, business, subdomain, jdbcUrl, username, password, schema,
-                            splitList(tables), splitList(tablePrefix), idType,
-                            normalizeSwitchableColumn(logicDeleteColumn), normalizeSwitchableColumn(versionColumn), overwrite));
+                            splitList(tables), splitList(tablePrefix), overwrite));
                     printGenerateSuccess(business, subdomain);
                 }
             }
@@ -146,9 +142,6 @@ public final class CodeGeneratorApplication {
                 arguments.value("schema", ""),
                 splitList(arguments.required("tables")),
                 splitList(arguments.value("table-prefix", "")),
-                arguments.value("id-type", ""),
-                normalizeSwitchableColumn(arguments.value("logic-delete-column", "deleted")),
-                normalizeSwitchableColumn(arguments.value("version-column", "version")),
                 arguments.flag("overwrite")));
         printGenerateSuccess(arguments.required("business"), arguments.required("subdomain"));
     }
@@ -218,11 +211,9 @@ public final class CodeGeneratorApplication {
         output.println("  --password-env <环境变量名>        密码环境变量，默认 CODEGEN_DB_PASSWORD");
         output.println("  --schema <schema>                数据库 schema");
         output.println("  --table-prefix <前缀1,前缀2>       生成类名时移除表前缀");
-        output.println("  --id-type <策略>                  AUTO/INPUT/ASSIGN_ID/ASSIGN_UUID/NONE");
-        output.println("  --logic-delete-column <列|none>   逻辑删除列，默认 deleted");
-        output.println("  --version-column <列|none>        乐观锁列，默认 version");
         output.println("  --overwrite                       覆盖同名文件；默认保留已有文件");
         output.println("  --project-root <目录>             项目根目录，默认当前目录");
+        output.println("持久化约定：PO 继承 common-infra BaseEntity，主键固定为 Long + ASSIGN_ID。");
         output.println("安全约束：不支持通过命令行参数传递数据库密码。");
     }
 
@@ -235,10 +226,6 @@ public final class CodeGeneratorApplication {
                 .filter(item -> !item.isEmpty())
                 .distinct()
                 .toList();
-    }
-
-    private static String normalizeSwitchableColumn(String value) {
-        return value == null || value.equalsIgnoreCase("none") ? "" : value.trim();
     }
 
     private static void requireText(String value, String name) {

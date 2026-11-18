@@ -1,10 +1,13 @@
-package com.kacean.power.common.infra.persistence;
+package com.kacean.power.common.infra.po;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.Version;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serial;
 import java.io.Serializable;
@@ -13,20 +16,22 @@ import java.time.LocalDateTime;
 /**
  * MyBatis-Plus 持久化对象基类：统一主键、外部编号、审计字段、逻辑删除与乐观锁映射。
  * <p>本基类仅供基础设施层持久化对象使用，与 {@code common-app} 中不绑定持久化框架的领域基类相互独立。
- * 主键不在此处绑定 {@code @TableId} 策略，由全局 {@code GlobalConfig.DbConfig} 决定；
- * 个别实体需要覆盖时，可在子类重新声明 {@code id} 并添加 {@code @TableId}。</p>
+ * 主键统一使用 {@code Long} 与 {@code ASSIGN_ID}，子类不得重复声明公共字段。</p>
+ * <p>基类不统一生成 {@code equals/hashCode/toString}，相等性由具体持久化对象按主键策略决定。</p>
  *
  * @author kacean-agent
  */
-@Data
+@Getter
+@Setter
 public abstract class BaseEntity implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 主键 ID，由 MyBatis-Plus 按字段名识别，默认使用全局主键策略。
+     * 主键 ID，由 MyBatis-Plus 使用雪花算法分配，不依赖数据库自增。
      */
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     protected Long id;
 
     /**

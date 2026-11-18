@@ -36,10 +36,17 @@ power-system
 ```
 
 - `common-web/common-app/common-infra/common-util/common-codegen` 均为普通 jar 模块，不作为业务 parent；其中 `common-codegen` 只由开发期脚本直接启动，不被业务或 runner 依赖。
-- `common-web` 直接依赖 `spring-webmvc`、`common-app` 与 `swagger-annotations-jakarta`（仅注解包），提供 `BaseController` 通用 MVC 基类（委托 `BaseService`）、统一响应体 `Result` 与统一分页请求体 `PageRequest`，不得加入 Boot Starter、Tomcat 或 Jackson。`standalone-runner` 通过 `spring-boot-starter-webmvc` 提供嵌入式容器、Jackson 和 Boot MVC 自动配置，并通过 `springdoc-openapi-starter-webmvc-ui` 提供 Swagger 文档（`/swagger-ui/index.html`、`/v3/api-docs`）；全局异常处理 `GlobalExceptionHandler` 位于 runner 的 `com.kacean.power.config` 包，不再放在 common-web。
-- `common-app` 只提供 `spring-context` 与通用应用层基类（`BaseEntity`、分页模型、`BaseRepository`、`BaseService`）；实体基类为纯 Java，审计由 `onCreate()`/`onUpdate()` 维护，仓储实现负责在新增保存、更新与逻辑删除时调用。具体持久化实现放在 port/deploy/runner，不放入 app。
-- `common-infra` 依赖 common-app，承载基础设施公共代码与依赖；`com.kacean.power.common.infra.persistence.BaseEntity` 是带 MyBatis-Plus 注解的持久化对象基类，与 app 的纯 Java 领域 `BaseEntity` 不同，不得放入或用于 `app.domain`。当前无公共仓储实现，业务仓储在各自 port 模块实现（如 ticket-port 的 `InMemoryTicketTypeRepository` 内存实现）。持久化 Provider 由实际运行模块配置。
-- 不引入 JPA/Hibernate；票种仍使用内存仓储，应用重启后数据丢失。`standalone-runner` 已统一引入 MyBatis-Plus Boot 4 Starter 和 MySQL 运行时驱动，`application.yml` 通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 配置数据源，真实密码不得提交。`common-codegen` 的元数据驱动仅供开发期使用；Starter、JDBC 驱动和数据源配置只放 runner，不得下沉到 app。
+- `common-web` 直接依赖 `spring-webmvc`、`common-app` 与 `swagger-annotations-jakarta`（仅注解包），提供 `BaseController` 通用 MVC 基类（当前为空基类，不调用应用服务）、MapStruct `BaseAssembler`、统一响应体 `Result`（`common.web.response`），不得加入 Boot Starter、Tomcat 或 Jackson；`Result` 的响应码与序列化边界见 `common/common-web/README.md`。`standalone-runner` 通过 `spring-boot-starter-webmvc` 提供嵌入式容器、Jackson 和 Boot MVC 自动配置，并通过 `springdoc-openapi-starter-webmvc-ui` 提供 Swagger 文档（`/swagger-ui/index.html`、`/v3/api-docs`）；当前 runner 未提供全局异常处理器，后续新增时应基于 `Result` 放在 runner 侧，不下沉到 common-web。
+- `common-app` 只提供 `spring-context` 与通用应用层类型：领域标记接口 `BaseDomain`（`common.app.domain`）、用例标记接口 `BaseCase`（`common.app.usecase`）、通用仓储接口 `BaseRepository`（`common.app.repo`，仅定义最小读写能力），以及标识模型 `ID`/`IDCollection`（`common.app.identity`）、业务查询参数契约 `Query` 与 `PageQuery`/`PageResult`/`Sort` 等查询模型（`common.app.query`）；`Query` 提供默认关键字与排序访问，`PageQuery` 组合业务查询参数、页码与页大小。领域模型保持纯 Java，不定义持久化实体基类或应用服务基类；审计字段由 infra 的持久化 `BaseEntity` 声明，填充机制由运行侧按需配置。具体持久化实现放在 port/deploy/runner，不放入 app。
+- `common-infra` 依赖 common-app、`mybatis-plus-extension`（传递 core，提供 `IRepository`/`AbstractRepository`）与 `spring-tx`，不引入 `mybatis-plus-spring`、Starter、数据源或 JDBC 驱动。`com.kacean.power.common.infra.po.BaseEntity` 是带 MyBatis-Plus 注解的持久化对象基类，与 app 的纯 Java 领域模型（`BaseDomain`）不同，不得放入或用于 `app.domain`；公共字段映射与 DDL 规范见 `common/common-infra/README.md`。公共基类按包划分：
+  - `infra.mapper.BaseMapper`：业务 MyBatis Mapper 统一父接口；`mapper` 包只承载 MyBatis Mapper。
+  - `infra.dao.BaseDao` / `BaseDaoImpl`：基于 `IRepository` / `AbstractRepository`（不引入 `IService/ServiceImpl`），构造器注入业务 Mapper；通用 CRUD 与 `QueryWrapper`/`LambdaQueryWrapper` 条件查询由 `IRepository` 提供，另增 `ID`/`IDCollection` 访问方法（`id` 主键与 `code` 外部编号二选一，批量条件 OR 组合、空集合短路）；批量方法逐条实现、不保证原子性，`saveOrUpdate` 按 BaseEntity 的 Long id 判定插入或更新。
+  - `infra.query.QueryConditionBuilder`：实现类覆写 `addProperty`/`addWhere`/`addOrder`，`toWrapper()` 只构建一次，输出 `QueryWrapper` 供 DAO 的 `list`/`getOneOpt`/`count` 等方法使用。
+  - `infra.struct.QueryParamStruct`：把 app 的 `Query` 实现转换为 `QueryConditionBuilder`；`infra.struct.StructMapper`：MapStruct 双向转换契约，独立于 MyBatis Mapper。
+  - `infra.curd.BaseCurd`：构造器注入 `BaseDao` 的通用 CRUD 委托基类，批量写方法带 `@Transactional(rollbackFor = Exception.class)`。
+  - `infra.repo.BaseRepositoryImpl`：实现 common-app 的 `BaseRepository`，构造器注入 `BaseDao` 与 `StructMapper`，保存后把主键、版本号回写为聚合；特有查询通过受保护的 `baseDao()`/`structMapper()` 扩展。
+  具体业务 DAO、转换器与仓储仍在各自 port 模块扩展，MyBatis-Plus 类型不得进入 app 层仓储接口。持久化 Provider 由实际运行模块配置。
+- 不引入 JPA/Hibernate；ticket（tickettype）子域当前仅有 app/port 与 contract 模块骨架，尚无业务代码或仓储实现。`standalone-runner` 已统一引入 MyBatis-Plus Boot 4 Starter 和 MySQL 运行时驱动，`application.yml` 通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 配置数据源，真实密码不得提交。`common-codegen` 的元数据驱动仅供开发期使用；Starter、JDBC 驱动和数据源配置只放 runner，不得下沉到 app。
 - maven-compiler-plugin 版本由根 POM pluginManagement 统一管理，不得回退到 Maven 默认绑定的旧版本。
 - 依赖方向：`port → app` 与 `deploy → 业务模块`；app 不依赖 port。**DDD 前期贫血模式下，port 内 web 可直接调用 infra**（简单 CRUD 不绕道 app），infra 不得反向依赖 web；业务复杂度上升后才由 app 承载用例编排，此时 web 改为调用 app 应用服务。
 - `share/core` 只放稳定、无单一业务归属的跨业务共享领域类型，不依赖其他项目模块或框架。
@@ -128,6 +135,6 @@ sh .agents/skills/power-system-build/scripts/verify.sh        # 默认 8080，�
 ### 排查构建或启动
 
 - `Child module ... does not exist`：先核对 `<modules>` 与实际目录，不凭记忆重建已移除模块。
-- 缺少 `ServletWebServerFactory`：检查 runner 的 `spring-boot-starter-web`，不要把 Starter 加回 common-web。
+- 缺少 `ServletWebServerFactory`：检查 runner 的 `spring-boot-starter-webmvc`，不要把 Starter 加回 common-web。
 - Controller 可直接使用 Spring MVC 注解；若直接使用 Servlet API、Jackson 注解等可选能力，由实际代码所在模块显式补充对应 API。
 - 静态资源或日志路径异常：检查启动工作目录、assembly 输出路径和 `spring.web.resources.static-locations`。
