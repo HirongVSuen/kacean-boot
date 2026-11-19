@@ -15,6 +15,7 @@
 
     <modules>
         <module>ticket</module>
+        <module>system</module>
         <module>deploy</module>
     </modules>
 

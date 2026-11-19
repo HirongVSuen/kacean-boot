@@ -175,7 +175,7 @@ business/ticket/ticket-port/src/main/java/com/kacean/power/tickettype/port/infra
 
 依赖与映射约定：
 
-- port 缺少依赖时幂等补充 `common-infra`、`common-web`、`mybatis-plus-core` 和 `provided` 作用域的 `spring-webmvc`；DDD 还确保 app 依赖 `common-app`、port 依赖 `<business>-app`。已有依赖不重复插入，运行容器仍由 runner 提供。
+- port 缺少依赖时幂等补充 `common-infra` 与 `common-web`；MyBatis-Plus 和 Spring MVC 编译 API 分别由二者传递提供，不再重复声明 `mybatis-plus-core`、`spring-webmvc`。DDD 还确保 app 依赖 `common-app`、port 依赖 `<business>-app`。已有依赖不重复插入，运行容器仍由 runner 提供。
 - DAO 实现使用 `@Repository`，CURD 使用 `@Component`，Controller 使用 `@RestController`，依赖由 common 基类 `@Autowired` 字段注入，生成的子类不再声明构造器；业务 Assembler/Convert 使用 `@Mapper(componentModel = "spring")`。
 - 主键固定为 `Long + ASSIGN_ID`，`id/external_no/deleted/create_at/create_by/modify_at/modify_by/version` 由 `BaseEntity` 统一映射，不在 Entity 子类重复声明；目标表必须预先包含这些公共列。
 - DTO 与 DDD 领域对象显式保留除 `deleted` 外的公共字段及业务字段，供查询、更新和 MapStruct 映射使用；逻辑删除由持久层管理，不对外暴露。

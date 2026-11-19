@@ -16,6 +16,7 @@
 
     <modules>
         <module>ticket-deploy</module>
+        <module>system-deploy</module>
     </modules>
 
     <properties>

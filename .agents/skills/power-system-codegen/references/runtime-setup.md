@@ -13,12 +13,13 @@
     <version>${project.version}</version>
 </dependency>
 <dependency>
-    <groupId>com.baomidou</groupId>
-    <artifactId>mybatis-plus-core</artifactId>
+    <groupId>com.kacean.power</groupId>
+    <artifactId>common-web</artifactId>
+    <version>${project.version}</version>
 </dependency>
 ```
 
-`common-infra` 提供 Entity 固定继承的 `BaseEntity`；公共字段及其 DDL 规范见 `common/common-infra/README.md`。生成 Web CRUD 时还会确保 port 依赖 `common-web` 与 `provided` 作用域的 `spring-webmvc`；DDD 模式额外确保 app 依赖 `common-app`、port 依赖 `<business>-app`。这些编译依赖不会把 MVC 容器或数据源下沉到业务模块。
+`common-infra` 提供 Entity 固定继承的 `BaseEntity`，并传递 MyBatis-Plus 编译 API；公共字段及其 DDL 规范见 `common/common-infra/README.md`。`common-web` 传递 Spring MVC 编译 API，因此 port 无需重复声明 `mybatis-plus-core` 或 `spring-webmvc`。DDD 模式额外确保 app 依赖 `common-app`、port 依赖 `<business>-app`。这些编译依赖不会把 MVC 容器或数据源下沉到业务模块。
 
 `standalone-runner` 已添加 Spring Boot 4 对应的 Starter 和 MySQL 驱动：
 
@@ -65,7 +66,7 @@ export DB_PASSWORD='实际密码'
 - 创建人、修改人取自运行侧操作人上下文（后续引入），未设置时使用 `system`。
 - 更新时只刷新 `modifyAt` 和 `modifyBy`。
 
-处理器作为 Spring 组件由 MyBatis-Plus 调用，只有实际执行对应 insert/update SQL 时才会触发填充。
+处理器作为 Spring 组件由 MyBatis-Plus 调用，只有实际执行对应 insert/update SQL 时才会触发填充。当前虽已有 `logincontext-contract` 与 runner 的 `LoginManager`，但尚未接入 `MetaObjectHandler`；不得把可获取登录上下文等同于审计字段已自动填充。
 
 ## 4. 逻辑删除与乐观锁
 
@@ -88,6 +89,6 @@ Entity 是基础设施对象，不是 `app.domain` 领域对象。需要 Reposit
 1. 在对应 `app.domain` 定义领域对象、`app.repo` 定义仓储接口；通用读写可继承 common-app `BaseRepository<D>`，标识使用 `ID`/`IDCollection`（`id` 主键与 `code` 外部编号二选一，批量标识去重后最多 1000 个）。
 2. 业务 DAO 接口继承 `infra.dao.BaseDao`，实现继承 `BaseDaoImpl`，生成的 `XxxMapper` 由父类 `@Autowired` 字段注入（按子类泛型解析，无需构造器，其父接口为 common-infra `BaseMapper`）；特有查询通过 `getBaseMapper()` 使用 `QueryWrapper`/`LambdaQueryWrapper`。
 3. 在 `port.infra.convert` 定义 MapStruct 转换接口，继承 `infra.repo.BaseConvert<领域, Entity>` 并加 `@Mapper(componentModel = "spring")`，使用 `fromDomain`/`toDomain` 显式完成 Entity ↔ 领域对象转换，不把 Entity 泄漏到 Web 或其他子域。
-4. 仓储实现继承 `infra.repo.BaseRepositoryImpl`，DAO 与转换器由父类 `@Autowired` 字段注入，无需构造器，保存后自动回写主键与版本号；特有查询用受保护的 `dao()`/`converter()` 扩展，Entity ↔ 领域对象转换统一调用 `fromDomain()`/`toDomain()`。业务 QP 继承 `Query`，DAO 按需覆写 `declareProperties` / `declareWheres`，通过 `builder.query(XxxQueryParam.class)` 获取具体 QP，并用 `addWhere(field, Operator, value)` 声明 LIKE、IN、BETWEEN 等特殊条件；`BaseDao.toWrapper` 默认执行 `processDefaultFields()`（普通字段 EQ）、`processKeyword()`、`processOrder()`，业务复用 `list(query)` / `page(pageQuery)`。字段统一使用 Entity Java 属性，由 `ColumnResolver` 映射数据库列；别名或复杂 `where(...)` 条件需 `markProcessed(...)`。
-5. `BaseRepository.saveAll/removeByIds` 不默认保证原子性，需要整体提交或回滚时由调用方建立事务边界；`BaseDao` 自带的批量保存与更新使用 MyBatis-Plus 批量能力并声明事务，调用时保留 Spring 代理边界。
+4. 仓储实现继承 `infra.repo.BaseRepositoryImpl`，DAO 与转换器由父类 `@Autowired` 字段注入，无需构造器；保存后返回由持久化 Entity 重新转换、包含主键与版本号的聚合。特有查询用受保护的 `dao()`/`converter()` 扩展，Entity ↔ 领域对象转换统一调用 `fromDomain()`/`toDomain()`。业务 QP 继承 `Query`，DAO 按需覆写 `declareProperties` / `declareWheres`，通过 `builder.query(XxxQueryParam.class)` 获取具体 QP，并用 `addWhere(field, Operator, value)` 声明 LIKE、IN、BETWEEN 等特殊条件；`BaseDao.toWrapper` 默认执行 `processDefaultFields()`（普通字段 EQ）、`processKeyword()`、`processOrder()`，业务复用 `list(query)` / `page(pageQuery)`。字段统一使用 Entity Java 属性，由 `ColumnResolver` 映射数据库列；别名或复杂 `where(...)` 条件需 `markProcessed(...)`。
+5. `BaseRepository.saveAll/removeByIds` 不默认保证原子性，需要整体提交或回滚时由调用方建立事务边界；`BaseDao` 自带的批量保存与更新使用 MyBatis-Plus 批量能力，事务以实际方法注解和 Spring 代理边界为准，不因方法名推定整体原子性。
 6. 按 `power-system-app` 和 `power-system-naming` 完成命名与依赖检查，在对应 `<business>-deploy` 运行架构测试与集成测试。

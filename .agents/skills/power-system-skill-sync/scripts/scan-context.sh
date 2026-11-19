@@ -59,7 +59,8 @@ if [[ -d .agents/skills ]]; then
       com.kacean.power.*) ;;
       common.app.*|common.infra.*|common.web.*|common.util.*)
         fqn="com.kacean.power.${fqn}" ;;
-      app.*|infra.*|web.*|util.*)
+      # 裸 app.* 也可能是业务子域包，不能归一化为 common-app。
+      infra.*|web.*|util.*)
         fqn="com.kacean.power.common.${fqn}" ;;
       *) continue ;;
     esac
@@ -68,7 +69,7 @@ if [[ -d .agents/skills ]]; then
       echo "缺失：$fqn"
       MISSING=$((MISSING + 1))
     fi
-  done < <(grep -rhoE '(com\.kacean\.power\.[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*|`(common\.)?(app|infra|web|util)(\.[A-Za-z0-9_]+)+`)' .agents/skills --include='*.md' \
+  done < <(grep -rhoE '(com\.kacean\.power\.[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*|`(common\.(app|infra|web|util)|infra|web|util)(\.[A-Za-z0-9_]+)+`)' .agents/skills --include='*.md' \
     | tr -d '`' | grep -E '\.[A-Z][A-Za-z0-9_]*$' | sort -u)
 fi
 if [[ "$MISSING" == "0" ]]; then

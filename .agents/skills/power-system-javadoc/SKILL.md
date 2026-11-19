@@ -22,7 +22,7 @@ description: power-system 项目 Java 注释与 Javadoc 规范。生成或修改
 
 ```java
 /**
- * 票种应用服务：定义并保存票种，保存前执行完整性与模板合法性校验。
+ * 票种类型应用服务：定义并保存票种类型，保存前执行完整性校验。
  *
  * @author kacean-agent
  */
@@ -35,12 +35,12 @@ record（`@author` 在 `@param` 之前）：
 
 ```java
 /**
- * 票证状态，由票种的状态机模板定义，不使用硬编码枚举。
+ * 票种类型名称值对象，统一校验名称非空白。
  *
  * @author kacean-agent
- * @param value 状态值，非空白
+ * @param value 票种类型名称，非空白
  */
-public record TicketState(String value) {
+public record TicketTypeName(String value) {
 }
 ```
 
@@ -48,19 +48,19 @@ public record TicketState(String value) {
 
 ```java
 /**
- * 工单类型对外契约：其他子域只依赖本接口，不接触 ticketType 内部实现。
+ * 票种类型对外契约：其他子域只依赖本接口，不接触 tickettype 内部实现。
  *
  * @author kacean-agent
  */
 public interface TicketTypeFacade {
 
     /**
-     * 按标识查询工单类型，不存在或已停用时抛出异常。
+     * 按标识查询票种类型，不存在时抛出业务异常。
      *
-     * @param ticketTypeId 工单类型标识
-     * @return 工单类型视图
+     * @param id 票种类型标识
+     * @return 票种类型视图
      */
-    TicketTypeView getRequired(String ticketTypeId);
+    TicketTypeView getRequired(ID id);
 }
 ```
 
@@ -76,7 +76,7 @@ public interface TicketTypeFacade {
 生成或修改代码后执行（输出应为空）：
 
 ```bash
-find business common core-share runner -path "*/target" -prune -o -name "*.java" -print | xargs grep -L "@author"
+find business common share runner -path "*/target" -prune -o -name "*.java" -print | xargs grep -L "@author"
 ```
 
-新建代码应为 `@author kacean-agent`；再运行 `mvn -pl business/deploy/ticket-deploy -am test`，确认编译、业务测试与架构规则全部通过。
+新建代码应为 `@author kacean-agent`；再运行 `mvn -pl business/deploy/<域>-deploy -am test`，确认编译、业务测试与架构规则全部通过。

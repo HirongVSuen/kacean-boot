@@ -28,4 +28,4 @@
 
 贫血控制器直接继承 `CurdController`，DDD 控制器直接继承 `DddController`。业务子类只声明特有端点，不重复实现父类已有 CRUD 映射，也不另建 `BaseController` / `SimpleController` 等平行继承层。DDD 父类继承的通用端点仍走 `BaseCurd` 与 Entity；需要领域用例时，由业务控制器新增端点并调用 app 服务。
 
-业务 port 模块直接使用 Spring MVC 注解时声明 `provided` 作用域的 `spring-webmvc`；嵌入式容器、Jackson 与 MVC 自动配置由 `standalone-runner` 提供。
+业务 port 模块通过 `common-web` 传递获得 Spring MVC 编译 API，无需重复声明 `spring-webmvc`；嵌入式容器、Jackson 与 MVC 自动配置由 `standalone-runner` 提供。

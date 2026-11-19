@@ -44,14 +44,15 @@ bash .agents/skills/power-system-skill-sync/scripts/scan-context.sh
 | 持久化对象 | `infra.entity.BaseEntity`（公共 8 列不重复声明） | `XxxEntity`，放 `port.infra.entity`，优先 codegen 生成 |
 | MyBatis Mapper | `infra.mapper.BaseMapper` | `XxxMapper`，放 `port.infra.mapper` |
 | DAO 通用读写 | `infra.dao.BaseDao` / `BaseDaoImpl`（`IRepository` 能力 + `ID`/`IDCollection` 访问） | `XxxDao` / `XxxDaoImpl`，特有查询用 `getBaseMapper()` + Wrapper 扩展 |
-| 仓储接口 | `common.app.repo.BaseRepository<D>`（最小通用读写） | `XxxRepository`，放 `app.repo`，只加业务特有方法 |
-| 仓储实现 | `infra.repo.BaseRepositoryImpl`（注入 DAO + 转换器，保存回写主键/版本号） | `XxxRepositoryImpl` 子类，特有查询用 `dao()`/`converter()`，转换用 `fromDomain()`/`toDomain()` |
+| 仓储接口 | `common.app.repo.BaseRepository<D>`（最小通用读写，`findById` 未命中返回 `null`） | `XxxRepository`，放 `app.repo`，只加业务特有方法 |
+| 仓储实现 | `infra.repo.BaseRepositoryImpl`（父类按泛型注入 DAO + 转换器） | `XxxRepositoryImpl` 子类，特有查询用 `dao()`/`converter()`，转换用 `fromDomain()`/`toDomain()`；保存返回由 Entity 重新转换、包含主键/版本号的聚合 |
 | 领域 ↔ Entity 转换 | `infra.repo.BaseConvert<DOMAIN, ENTITY>`（MapStruct） | `XxxConvert` + `@Mapper(componentModel = "spring")`，放 `port.infra.convert` |
 | 条件 / 分页查询 | app 侧 `Query`、`PageQuery`/`PageResult`/`Sort`；infra 侧 `WrapperBuilder` / `Operator` / `ColumnResolver`；普通 QP 字段自动 EQ | `XxxQueryParam`（普通类，继承 `Query`）；DAO 按需覆写 `declareProperties` / `declareWheres`，特殊条件用 `addWhere`，复杂条件用 `where(...)` + `markProcessed(...)` |
 | 标识与批量 | `common.app.identity.ID` / `IDCollection`（二选一标识、去重、上限 1000） | 不自建标识值对象替代通用场景 |
 | Controller / 响应 | `common-web` `BaseDTO`、`CurdController`/`DddController`、`CurdAssembler`/`DddAssembler`、`Result` | 贫血 CRUD 继承 CURD 基类，DDD 继承 DDD 子类；通用端点只在 `CurdController` 定义，业务类只扩展特有端点与转换 |
-| 领域 / 用例标记 | `common.app.domain.BaseDomain`、`common.app.usecase.BaseCase` | 领域对象保持纯 Java |
-| 跨子域调用 | 对方 `<子域>-contract` 的 `XxxFacade` / `XxxView` | 提供方在 `app.service.facade` 实现 `XxxFacadeImpl` |
+| 领域标记 / 可选用例基类 | `common.app.domain.BaseDomain`；`common.app.usecase.BaseCase<D extends BaseDomain>`（持有 `BaseRepository<D>`，提供受保护的 `getRepository()`） | 领域对象保持纯 Java；`XxxService` 与复杂用例不强制继承 `BaseCase` |
+| 跨子域调用 | 对方 `<子域>-contract` 的 `XxxFacade` / `XxxView` / 管理契约 | 提供方在 `app.service.facade` 实现 `XxxFacadeImpl`；其他契约按 `power-system-share` 接入 |
+| 登录上下文与身份环境适配 | `logincontext-contract` 的 `LoginContextManager` / `LoginContextProvider`，语义见 `power-system-share` | 消费方注入 `LoginContextManager`；Web Provider 放 `port.web.provider`，不新建平行登录上下文或 Provider SPI |
 | 跨业务稳定共享类型 | `share/core` 既有类型 | 新共享类型先进 `share/core`，不在业务间互相 import |
 | 工具方法 | `common-util` 聚合的 Guava / Apache Commons | 不为第三方工具再包一层无价值工具类 |
 
@@ -61,7 +62,7 @@ bash .agents/skills/power-system-skill-sync/scripts/scan-context.sh
 2. **持久化技术不越层**：MyBatis-Plus 类型（Wrapper、`IRepository`、Entity）不得进入 `app` 仓储接口与领域对象；不引入 `mybatis-plus-spring` 的 `IService/ServiceImpl`，不引入 JPA/Hibernate。
 3. **依赖方向不越界**：`port → app`、`deploy → 业务模块`；app 不依赖 port，infra 不依赖 web；跨子域只依赖对方 contract，不依赖对方 app/port。
 4. **调用链路按复杂度收敛**：简单 CRUD 允许 `web → infra` 直调（贫血阶段）；多步编排、跨仓储协作、独立事务/权限边界必须进入 `app` 的 `XxxService`，复杂用例再拆 `service/usecase`；`FacadeImpl` 始终经由 `XxxService`。
-5. **批量与事务语义不夸大**：`BaseRepository.saveAll/removeByIds` 逐条执行、不默认保证原子性，需要整体提交/回滚时由调用方建立事务边界；`BaseDao` 批量保存与更新使用 MyBatis-Plus 批量能力并声明事务，调用时保留 Spring 代理边界。`IDCollection` 批量标识上限 1000，空集合不访问数据库。
+5. **批量与事务语义不夸大**：`BaseRepository.saveAll/removeByIds` 不默认保证原子性，需要整体提交/回滚时由调用方建立事务边界；`BaseDao` 批量保存与更新使用 MyBatis-Plus 批量能力，事务以实际方法注解和 Spring 代理边界为准，不因方法名推定整体原子性。`IDCollection` 批量标识上限 1000，空集合不访问数据库。
 6. **公共字段不重复**：`id`/`external_no`/`deleted`/审计字段/`version` 由 `BaseEntity` 统一映射，业务 Entity 与 DDL 不得另起策略（如自增主键、String UUID）。
 7. **不虚构事实**：写入代码或文档的每个类、方法、配置项必须能在源码中找到；「runner 已提供某处理器」「某基类已有某方法」等断言必须有代码证据。
 

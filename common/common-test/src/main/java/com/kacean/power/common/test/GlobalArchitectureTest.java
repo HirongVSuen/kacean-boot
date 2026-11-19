@@ -90,7 +90,7 @@ public abstract class GlobalArchitectureTest {
     public static final ArchRule 子域层根包必须按技术分包 = noClasses()
             .should().resideInAnyPackage("..web", "..app", "..infra")
             .as("子域包结构约束：com.kacean.power.<子域>.app 与 <子域>.port.<web|infra> 层根包下不得直接建类，"
-                    + "port.web 按 controller/dto/assembler/config、app 按 service/domain/repo、"
+                    + "port.web 按 controller/dto/assembler/provider/config、app 按 service/domain/repo、"
                     + "port.infra 按 entity/mapper/dao/curd/repo/convert/query/client/config 分包");
 
     /** 子域实现包之间不能调用：不同子域切片（含跨层）禁止依赖；对方 &lt;子域&gt;.contract 契约包不参与切片，天然放行 */

@@ -372,12 +372,14 @@ class BusinessCodeGeneratorTest {
 
     private void assertGeneratedDependencies(String mode) throws IOException {
         String portPom = Files.readString(path("business/ticket/ticket-port/pom.xml"));
-        for (String artifact : List.of(
-                "ticket-app", "common-infra", "common-web", "mybatis-plus-core", "spring-webmvc")) {
+        for (String artifact : List.of("ticket-app", "common-infra", "common-web")) {
             assertEquals(1, occurrences(portPom, "<artifactId>" + artifact + "</artifactId>"),
                     mode + " 模式依赖重复或缺失：" + artifact);
         }
-        assertTrue(portPom.contains("<scope>provided</scope>"));
+        for (String artifact : List.of("mybatis-plus-core", "spring-webmvc")) {
+            assertFalse(portPom.contains("<artifactId>" + artifact + "</artifactId>"),
+                    mode + " 模式不应重复声明传递依赖：" + artifact);
+        }
     }
 
     private String createDatabase() {

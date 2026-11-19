@@ -23,6 +23,7 @@
 
     <modules>
         <module>core</module>
+        <module>logincontext-contract</module>
         <module>tickettype-contract</module>
     </modules>
 

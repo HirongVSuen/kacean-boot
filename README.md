@@ -45,10 +45,15 @@ power-system/
 │   ├── ticket/                          工单业务模块
 │   │   ├── ticket-app/                  应用服务、领域模型（纯 Java）、仓储接口（独立模块）
 │   │   └── ticket-port/                 web（Controller、DTO、assembler）+ infra（仓储实现、外部客户端）
+│   ├── system/                          系统业务模块
+│   │   ├── system-app/                  应用服务、领域模型（纯 Java）、仓储接口（独立模块）
+│   │   └── system-port/                 web（Controller、DTO、assembler）+ infra（仓储实现、外部客户端）
 │   └── deploy/                          部署聚合层
-│       └── ticket-deploy/               组合 ticket-app/port，供 runner 依赖
+│       ├── ticket-deploy/               组合 ticket-app/port，供 runner 依赖
+│       └── system-deploy/               组合 system-app/port，供 runner 依赖
 └── share/                               共享与契约聚合层（纯 Java，按需显式依赖）
     ├── core/                            跨业务共享内核：稳定共享领域类型（原 core-share）
+    ├── logincontext-contract/            logincontext 子域契约：登录上下文、管理契约与 Provider SPI
     └── tickettype-contract/             tickettype 子域对外契约（Facade/DTO/事件）
 ```
 
@@ -56,21 +61,21 @@ power-system/
 
 `standalone-runner` 当前未提供全局异常处理器；后续如需统一异常响应，应基于 `common-web` 的 `Result` 在 runner 侧实现，不下沉到 `common-web`。
 
-业务 `app/port` 子模块的 parent 是对应业务聚合模块（当前为 `ticket`），再通过 Maven dependency 引入相应的 `common-*`。继承只负责项目构建配置，分层公共能力通过依赖传递。
+业务 `app/port` 子模块的 parent 是对应业务聚合模块（当前为 `ticket`、`system`），再通过 Maven dependency 引入相应的 `common-*`。继承只负责项目构建配置，分层公共能力通过依赖传递。
 
-`share` 是共享与契约聚合层：`share/core` 只放稳定、无单一业务归属的跨业务共享领域类型（原 `core-share`）；`share/<子域>-contract` 放对应子域的对外契约（`XxxFacade` 接口、DTO、领域事件），由提供方子域在 app 层实现、消费方按需显式依赖。两者均为纯 Java jar，不依赖业务实现或框架，未被依赖时不会进入分发包。详细边界见 [`share/README.md`](share/README.md)。
+`share` 是共享与契约聚合层：`share/core` 只放稳定、无单一业务归属的跨业务共享领域类型（原 `core-share`）；`share/<子域>-contract` 放对应子域的对外契约（`XxxFacade` 接口、DTO、领域事件与按需定义的 Provider SPI），由提供方子域在 app 层实现、消费方按需显式依赖。两者均为纯 Java jar，不依赖业务实现或框架，未被依赖时不会进入分发包。详细边界见 [`share/README.md`](share/README.md)。
 
-领域模型为纯 Java 对象，不使用 JPA 等持久化框架注解。持久化适配由 `port` 或部署侧按需配置。ticket 子域（`tickettype`）当前仅有 `ticket-app`/`ticket-port` 模块骨架，尚未提供应用服务、领域模型、仓储与控制器实现。
+领域模型为纯 Java 对象，不使用 JPA 等持久化框架注解。持久化适配由 `port` 或部署侧按需配置。ticket 子域（`tickettype`）当前已有票种类型贫血 CRUD 的 Web 与持久化代码，尚无 app 领域对象、仓储或应用服务实现；登录上下文契约独立为 `share/logincontext-contract`（`com.kacean.power.logincontext.contract`，含 `LoginContext`、`LoginContextManager` 与 `LoginContextProvider`）；`LoginManager` 位于 standalone-runner，作为运行时编排组件创建同一上下文实例，编排 Spring Bean 或 Java SPI Provider 完成填充。loginaccount 子域承载登录账号贫血 CRUD，并提供该 SPI 的 `LoginAccountContextProvider` 实现：开发期通过请求头 `X-Login-Account` 模拟登录，查询启用账号填充上下文，尚未接入认证设施。
 
 ### 依赖方向
 
 ```text
 standalone-runner
-└── ticket-deploy
-    ├── ticket-port ──────> ticket-app
+└── <域>-deploy（当前：ticket-deploy、system-deploy）
+    ├── <域>-port ────────> <域>-app
     │   ├── common-web（最小 Spring MVC + 通用 MVC 基类 + 统一请求/响应体）
     │   └── common-infra
-    └── ticket-app ───────> common-app（Spring DI + 通用应用层基类）
+    └── <域>-app ─────────> common-app（Spring DI + 通用应用层基类）
 ```
 
 必须遵守以下约束：
@@ -287,12 +292,12 @@ spring:
 
 ## 架构测试
 
-`common-test` 的 `GlobalArchitectureTest` 统一维护全局 ArchUnit 规则。`ticket-deploy` 通过 `ArchitectureTest` 继承并执行这些规则。
+`common-test` 的 `GlobalArchitectureTest` 统一维护全局 ArchUnit 规则。`ticket-deploy` 与 `system-deploy` 分别通过 `ArchitectureTest` 继承并执行这些规则。
 
 运行架构测试：
 
 ```bash
-mvn test -pl business/deploy/ticket-deploy -am
+mvn test -pl business/deploy/ticket-deploy,business/deploy/system-deploy -am
 ```
 
 当前全局规则共 **7 条**（2 条分层依赖 + 2 条子域分包 + 3 条子域契约）：

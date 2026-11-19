@@ -25,22 +25,6 @@
             <artifactId>ticket-deploy</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- 全局异常处理直接使用统一响应体与实体不存在异常，显式声明直接依赖 -->
-        <dependency>
-            <groupId>com.kacean.power</groupId>
-            <artifactId>common-web</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.kacean.power</groupId>
-            <artifactId>common-app</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.kacean.power</groupId>
-            <artifactId>common-infra</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <!-- MyBatis-Plus Boot 4 自动配置：SqlSessionFactory、Mapper 与 MetaObjectHandler -->
         <dependency>
             <groupId>com.baomidou</groupId>
@@ -61,6 +45,18 @@
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+        </dependency>
+        <!-- 系统业务通过部署模块进入单体运行时 -->
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>system-deploy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- 登录管理器作为运行时编排组件实现登录上下文契约，显式声明直接依赖 -->
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>logincontext-contract</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 

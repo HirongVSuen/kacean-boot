@@ -425,8 +425,6 @@ public final class BusinessCodeGenerator {
     private static void ensurePortDependencies(Path pomPath) {
         ensureDependency(pomPath, "com.kacean.power", "common-infra", null, "port 模块");
         ensureDependency(pomPath, "com.kacean.power", "common-web", null, "port 模块");
-        ensureDependency(pomPath, "org.springframework", "spring-webmvc", "provided", "port 模块");
-        ensureDependency(pomPath, "com.baomidou", "mybatis-plus-core", null, "port 模块");
     }
 
     /**

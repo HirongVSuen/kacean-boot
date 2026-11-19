@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -44,9 +45,11 @@ class BusinessModuleScaffolderTest {
         assertTrue(Files.readString(projectRoot.resolve("runner/standalone-runner/pom.xml"))
                 .contains("<artifactId>asset-deploy</artifactId>"));
         String portPom = Files.readString(projectRoot.resolve("business/asset/asset-port/pom.xml"));
-        assertTrue(portPom.contains("<artifactId>mybatis-plus-core</artifactId>"));
-        assertTrue(portPom.contains("<artifactId>spring-webmvc</artifactId>"));
-        assertTrue(portPom.contains("<scope>provided</scope>"));
+        assertTrue(portPom.contains("<artifactId>common-infra</artifactId>"));
+        assertTrue(portPom.contains("<artifactId>common-web</artifactId>"));
+        assertTrue(portPom.contains("<artifactId>asset-app</artifactId>"));
+        assertFalse(portPom.contains("<artifactId>mybatis-plus-core</artifactId>"));
+        assertFalse(portPom.contains("<artifactId>spring-webmvc</artifactId>"));
     }
 
     @Test

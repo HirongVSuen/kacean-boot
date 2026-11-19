@@ -156,17 +156,6 @@ final class BusinessModuleScaffolder {
                             <artifactId>%s-app</artifactId>
                             <version>${project.version}</version>
                         </dependency>
-                        <!-- Entity 与 Mapper 的编译期依赖；运行 Starter 由 standalone-runner 按需引入 -->
-                        <dependency>
-                            <groupId>com.baomidou</groupId>
-                            <artifactId>mybatis-plus-core</artifactId>
-                        </dependency>
-                        <!-- Controller 编译期依赖；MVC 容器由 standalone-runner 提供 -->
-                        <dependency>
-                            <groupId>org.springframework</groupId>
-                            <artifactId>spring-webmvc</artifactId>
-                            <scope>provided</scope>
-                        </dependency>
                     </dependencies>
 
                 </project>
