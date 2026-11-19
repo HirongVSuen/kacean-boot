@@ -27,7 +27,7 @@ import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.sli
  * （@ArchTest 字段随继承自动执行；@AnalyzeClasses 不支持继承，子类必须显式声明扫描范围。）
  * 包段约定：应用层 ..app..（独立 app 模块）、Web MVC 层 ..port.web..、基础设施层 ..port.infra..（同属 port 模块）。
  * 子域分包约定：com.kacean.power.&lt;子域&gt;.app 与 com.kacean.power.&lt;子域&gt;.port.&lt;web|infra&gt;，
- * 层下再按技术分包（service/domain、controller/persistence 等），如 tickettype/app、tickettype/port/web、tickettype/port/infra；
+ * 层下再按技术分包（service/domain、controller、entity/mapper 等），如 tickettype/app、tickettype/port/web、tickettype/port/infra；
  * 不同子域的实现包之间不能调用。调用策略：DDD 前期贫血模式下 port.web 可直接调用 port.infra（简单 CRUD 不绕道 app），
  * 业务复杂度上升后才由 app 承载用例编排；app 不得反向依赖 port。
  * 子域间协作约定：同步调用经由 share/&lt;子域&gt;-contract 模块中 &lt;子域&gt;.contract 包的 XxxFacade 接口
@@ -90,8 +90,8 @@ public abstract class GlobalArchitectureTest {
     public static final ArchRule 子域层根包必须按技术分包 = noClasses()
             .should().resideInAnyPackage("..web", "..app", "..infra")
             .as("子域包结构约束：com.kacean.power.<子域>.app 与 <子域>.port.<web|infra> 层根包下不得直接建类，"
-                    + "port.web 按 controller/dto/assembler/config、app 按 service/domain/repository、"
-                    + "port.infra 按 persistence/client/config 分包");
+                    + "port.web 按 controller/dto/assembler/config、app 按 service/domain/repo、"
+                    + "port.infra 按 entity/mapper/dao/curd/repo/convert/query/client/config 分包");
 
     /** 子域实现包之间不能调用：不同子域切片（含跨层）禁止依赖；对方 &lt;子域&gt;.contract 契约包不参与切片，天然放行 */
     @ArchTest

@@ -46,6 +46,6 @@ class PageQueryTest {
                 () -> assertEquals(PageQuery.MAX_PAGE_SIZE, query.pageSize()));
     }
 
-    private record TestQuery() implements Query {
+    private static final class TestQuery extends Query {
     }
 }

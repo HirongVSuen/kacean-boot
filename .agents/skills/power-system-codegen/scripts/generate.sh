@@ -22,7 +22,7 @@ fi
 
 "${MVN[@]}" -q -f "$MODULE_DIR/pom.xml" compile \
   org.apache.maven.plugins:maven-dependency-plugin:3.8.1:build-classpath \
-  -Dmdep.outputFile="$CLASSPATH_FILE"
+  -Dmdep.outputFile="$CLASSPATH_FILE" -DincludeScope=runtime
 
 case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) PATH_SEPARATOR=';' ;;

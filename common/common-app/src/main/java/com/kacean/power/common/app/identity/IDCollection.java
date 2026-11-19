@@ -1,7 +1,5 @@
 package com.kacean.power.common.app.identity;
 
-import com.kacean.power.common.app.query.Query;
-
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -14,7 +12,7 @@ import java.util.List;
  * @param ids 主键集合，可为 {@code null}
  * @param extendNo 外部编号集合，可为 {@code null}
  */
-public record IDCollection(List<Long> ids, List<String> extendNo) implements Query {
+public record IDCollection(List<Long> ids, List<String> extendNo) {
 
     /**
      * 单次批量操作允许的最大标识数，按去重后的主键与外部编号总数计算。

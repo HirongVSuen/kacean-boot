@@ -37,9 +37,9 @@ git log --oneline -5        # 已提交的重构同样纳入核对
 
 | 变化的事实来源 | 受影响的 skill 与核对点 |
 | --- | --- |
-| `common/common-infra`（BaseEntity/BaseMapper/BaseDao(Impl)/BaseRepositoryImpl/StructMapper/QueryConditionBuilder/QueryParamStruct/BaseCurd 及 README） | `power-system-build` §2 模块边界；`power-system-app` §4 仓储与查询链路；`power-system-naming` §2 infra 分包、§3 类命名；`power-system-codegen` 输出说明与 `references/runtime-setup.md` §5；`power-system-business` §2 复用矩阵、§3 红线 |
+| `common/common-infra`（BaseEntity/BaseMapper/BaseDao(Impl)/BaseRepositoryImpl/BaseConvert/WrapperBuilder/Operator/ColumnResolver/BaseCurd 及 README） | `power-system-build` §2 模块边界；`power-system-app` §4 仓储与查询链路；`power-system-naming` §2 infra 分包、§3 类命名；`power-system-codegen` 输出说明与 `references/runtime-setup.md` §5；`power-system-business` §2 复用矩阵、§3 红线 |
 | `common/common-app`（BaseDomain/BaseCase/BaseRepository、ID/IDCollection、Query 与分页模型） | `power-system-build` §2；`power-system-app` §2/§4；`power-system-naming` §3；`power-system-business` §2 |
-| `common/common-web`（BaseController/BaseAssembler/Result 及 README） | `power-system-build` §2；`power-system-naming` §3；`power-system-business` §2 |
+| `common/common-web`（BaseDTO/CurdController/DddController/CurdAssembler/DddAssembler/Result 及 README） | `power-system-build` §2；`power-system-naming` §3；`power-system-business` §2 |
 | `common/common-codegen`（生成器、模板、脚本参数） | `power-system-codegen` 全文（参数表、输出位置、POM 依赖补充）；`references/runtime-setup.md`；`power-system-business` §4 开发流程 |
 | `common/common-test`（GlobalArchitectureTest 规则与包约束） | `power-system-build` §5 规则数量；`power-system-naming` §2 分包约束；`power-system-app` §1 包结构；`power-system-share` 契约约束；`power-system-business` §3 红线 |
 | 根 `pom.xml`、模块聚合、各模块依赖 | `power-system-build` §1/§2/§4；`power-system-codegen` `references/runtime-setup.md` §1 依赖边界 |

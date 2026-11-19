@@ -43,8 +43,10 @@ class BusinessModuleScaffolderTest {
                 .contains("<module>asset-deploy</module>"));
         assertTrue(Files.readString(projectRoot.resolve("runner/standalone-runner/pom.xml"))
                 .contains("<artifactId>asset-deploy</artifactId>"));
-        assertTrue(Files.readString(projectRoot.resolve("business/asset/asset-port/pom.xml"))
-                .contains("<artifactId>mybatis-plus-core</artifactId>"));
+        String portPom = Files.readString(projectRoot.resolve("business/asset/asset-port/pom.xml"));
+        assertTrue(portPom.contains("<artifactId>mybatis-plus-core</artifactId>"));
+        assertTrue(portPom.contains("<artifactId>spring-webmvc</artifactId>"));
+        assertTrue(portPom.contains("<scope>provided</scope>"));
     }
 
     @Test

@@ -24,7 +24,7 @@ if ($null -eq $Java) {
 
 & $MavenCommand -q -f (Join-Path $ModuleDir 'pom.xml') compile `
     org.apache.maven.plugins:maven-dependency-plugin:3.8.1:build-classpath `
-    "-Dmdep.outputFile=$ClasspathFile"
+    "-Dmdep.outputFile=$ClasspathFile" '-DincludeScope=runtime'
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }

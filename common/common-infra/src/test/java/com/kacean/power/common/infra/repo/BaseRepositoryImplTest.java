@@ -1,18 +1,18 @@
 package com.kacean.power.common.infra.repo;
 
+import com.kacean.power.common.app.domain.BaseDomain;
 import com.kacean.power.common.app.identity.ID;
 import com.kacean.power.common.app.identity.IDCollection;
-import com.kacean.power.common.app.repo.BaseRepository;
+import com.kacean.power.common.app.query.PageResult;
 import com.kacean.power.common.infra.dao.BaseDaoImpl;
-import com.kacean.power.common.infra.po.BaseEntity;
+import com.kacean.power.common.infra.entity.BaseEntity;
 import com.kacean.power.common.infra.mapper.BaseMapper;
-import com.kacean.power.common.infra.struct.StructMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.DirectFieldAccessor;
 
 import java.lang.reflect.Proxy;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.LongStream;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 基础仓储实现测试：验证 DAO 委托、MapStruct 转换、批量写入与失败保护。
+ * 基础仓储实现测试：验证 DAO 委托、聚合与持久化对象转换、批量写入与失败保护。
  *
  * @author kacean-agent
  */
@@ -39,18 +39,26 @@ class BaseRepositoryImplTest {
         dao.findResult = entity;
         dao.findResults = List.of(entity);
 
-        Optional<TestDomain> found = repository.findById(id);
+        TestDomain found = repository.findById(id);
         List<TestDomain> foundAll = repository.findByIds(ids);
-        repository.deleteById(id);
-        repository.deleteByIds(ids);
+        repository.removeById(id);
+        repository.removeByIds(ids);
 
         assertAll(
-                () -> assertEquals(new TestDomain(1L, "one"), found.orElseThrow()),
+                () -> assertEquals(new TestDomain(1L, "one"), found),
                 () -> assertEquals(List.of(new TestDomain(1L, "one")), foundAll),
                 () -> assertSame(id, dao.lastFindId),
                 () -> assertSame(ids, dao.lastFindIds),
                 () -> assertSame(id, dao.lastDeletedId),
                 () -> assertSame(ids, dao.lastDeletedIds));
+    }
+
+    @Test
+    void 查询未命中_返回null而不抛出异常() {
+        TestDao dao = new TestDao();
+        TestRepository repository = new TestRepository(dao);
+
+        assertNull(repository.findById(new ID(1L, null)));
     }
 
     @Test
@@ -90,7 +98,7 @@ class BaseRepositoryImplTest {
         IDCollection empty = new IDCollection(null, null);
 
         assertTrue(repository.findByIds(empty).isEmpty());
-        repository.deleteByIds(empty);
+        repository.removeByIds(empty);
 
         assertAll(
                 () -> assertNull(dao.lastFindIds),
@@ -101,7 +109,7 @@ class BaseRepositoryImplTest {
     void 批量保存超过上限_在访问DAO前拒绝() {
         TestDao dao = new TestDao();
         TestRepository repository = new TestRepository(dao);
-        List<TestDomain> aggregates = LongStream.rangeClosed(1, BaseRepository.MAX_BATCH_SIZE + 1L)
+        List<TestDomain> aggregates = LongStream.rangeClosed(1, IDCollection.MAX_BATCH_SIZE + 1L)
                 .mapToObj(id -> new TestDomain(id, "aggregate-" + id))
                 .toList();
 
@@ -109,32 +117,58 @@ class BaseRepositoryImplTest {
         assertEquals(0, dao.saveBatchCalls);
     }
 
-    private static final class TestRepository extends BaseRepositoryImpl<TestDomain, TestEntity> {
+    private static final class TestRepository extends BaseRepositoryImpl<TestDomain, TestEntity, TestDao> {
 
-        private TestRepository(TestDao baseDao) {
-            super(baseDao, new TestConverter());
+        private TestRepository(TestDao dao) {
+            // 父类已改为字段注入，测试通过反射设置父类的 dao 与 converter 字段
+            DirectFieldAccessor accessor = new DirectFieldAccessor(this);
+            accessor.setPropertyValue("dao", dao);
+            accessor.setPropertyValue("converter", new TestConverter());
         }
     }
 
-    private static final class TestConverter implements StructMapper<TestDomain, TestEntity> {
+    private static final class TestConverter implements BaseConvert<TestDomain, TestEntity> {
 
         @Override
-        public TestEntity toDo(TestDomain domain) {
+        public TestDomain toDomain(TestEntity entity) {
+            return new TestDomain(entity.getId(), entity.getName());
+        }
+
+        @Override
+        public TestEntity fromDomain(TestDomain domain) {
             return new TestEntity(domain.id(), domain.name());
         }
 
         @Override
-        public TestDomain toDomain(TestEntity dataObject) {
-            return new TestDomain(dataObject.getId(), dataObject.getName());
+        public List<TestDomain> toDomain(List<TestEntity> entityList) {
+            return entityList.stream().map(this::toDomain).toList();
+        }
+
+        @Override
+        public List<TestEntity> fromDomain(List<TestDomain> domainList) {
+            return domainList.stream().map(this::fromDomain).toList();
+        }
+
+        @Override
+        public PageResult<TestDomain> toDomain(PageResult<TestEntity> pageResult) {
+            return new PageResult<>(toDomain(pageResult.records()),
+                    pageResult.pageNum(), pageResult.pageSize(), pageResult.total());
+        }
+
+        @Override
+        public PageResult<TestEntity> fromDomain(PageResult<TestDomain> pageResult) {
+            return new PageResult<>(fromDomain(pageResult.records()),
+                    pageResult.pageNum(), pageResult.pageSize(), pageResult.total());
         }
     }
 
     private static final class TestDao extends BaseDaoImpl<TestMybatisMapper, TestEntity> {
 
         private TestDao() {
-            // 本测试覆写全部 DAO 访问方法，Mapper 仅为满足构造器非空约束的空代理
-            super((TestMybatisMapper) Proxy.newProxyInstance(TestMybatisMapper.class.getClassLoader(),
-                    new Class<?>[]{TestMybatisMapper.class}, (proxy, method, args) -> null));
+            // 本测试覆写全部 DAO 访问方法，Mapper 仅为填充父类注入字段的空代理
+            new DirectFieldAccessor(this).setPropertyValue("baseMapper",
+                    Proxy.newProxyInstance(TestMybatisMapper.class.getClassLoader(),
+                            new Class<?>[]{TestMybatisMapper.class}, (proxy, method, args) -> null));
         }
 
         private TestEntity findResult;
@@ -149,14 +183,14 @@ class BaseRepositoryImplTest {
         private int saveBatchCalls;
 
         @Override
-        public Optional<TestEntity> findById(ID identity) {
-            lastFindId = identity;
-            return Optional.ofNullable(findResult);
+        public TestEntity findById(ID id) {
+            lastFindId = id;
+            return findResult;
         }
 
         @Override
-        public List<TestEntity> findByIds(IDCollection identities) {
-            lastFindIds = identities;
+        public List<TestEntity> findByIds(IDCollection ids) {
+            lastFindIds = ids;
             return findResults;
         }
 
@@ -178,20 +212,22 @@ class BaseRepositoryImplTest {
         }
 
         @Override
-        public void deleteById(ID identity) {
-            lastDeletedId = identity;
+        public boolean removeById(ID id) {
+            lastDeletedId = id;
+            return true;
         }
 
         @Override
-        public void deleteByIds(IDCollection identities) {
-            lastDeletedIds = identities;
+        public boolean removeById(IDCollection ids) {
+            lastDeletedIds = ids;
+            return true;
         }
     }
 
     private interface TestMybatisMapper extends BaseMapper<TestEntity> {
     }
 
-    private record TestDomain(Long id, String name) {
+    private record TestDomain(Long id, String name) implements BaseDomain {
     }
 
     private static final class TestEntity extends BaseEntity {

@@ -2,10 +2,15 @@ package com.kacean.power.common.infra.dao;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.kacean.power.common.infra.po.BaseEntity;
-import com.kacean.power.common.infra.query.QueryConditionBuilder;
+import com.kacean.power.common.infra.entity.BaseEntity;
+import com.kacean.power.common.app.query.Query;
+import com.kacean.power.common.app.query.Sort;
+import com.kacean.power.common.app.query.SortDirection;
+import com.kacean.power.common.infra.query.Operator;
+import com.kacean.power.common.infra.query.WrapperBuilder;
 import com.kacean.power.common.infra.mapper.BaseMapper;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.DirectFieldAccessor;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
@@ -146,48 +151,24 @@ class BaseDaoImplTest {
     }
 
     @Test
-    void 条件构建器查询_列表与统计均使用构建后的Wrapper() {
+    void 声明式查询_列表使用自动构建的Wrapper() {
         AtomicReference<QueryWrapper<TestEntity>> listWrapper = new AtomicReference<>();
-        AtomicReference<QueryWrapper<TestEntity>> countWrapper = new AtomicReference<>();
         TestDao dao = new TestDao(mapper((proxy, method, args) -> {
-            switch (method.getName()) {
-                case "selectList" -> {
-                    listWrapper.set(castWrapper(args[0]));
-                    return List.of();
-                }
-                case "selectCount" -> {
-                    countWrapper.set(castWrapper(args[0]));
-                    return 1L;
-                }
-                default -> {
-                    return null;
-                }
+            if ("selectList".equals(method.getName())) {
+                listWrapper.set(castWrapper(args[0]));
+                return List.of();
             }
+            return null;
         }));
-        QueryConditionBuilder<TestEntity> builder = new QueryConditionBuilder<>() {
-            @Override
-            protected void addProperty() {
-                wrapper().select("id");
-            }
+        TestQuery query = new TestQuery("EXT-1");
+        query.setSorts(List.of(new Sort("id", SortDirection.ASC)));
 
-            @Override
-            protected void addWhere() {
-                wrapper().eq("external_no", "EXT-1");
-            }
-
-            @Override
-            protected void addOrder() {
-                wrapper().orderByAsc("id");
-            }
-        };
-
-        assertEquals(List.of(), dao.list(builder));
-        assertEquals(1L, dao.count(builder));
+        assertEquals(List.of(), dao.list(query));
         assertAll(
                 () -> assertEquals("id", listWrapper.get().getSqlSelect()),
-                () -> assertTrue(listWrapper.get().getSqlSegment().contains("ORDER BY")),
-                () -> assertSame(listWrapper.get(), countWrapper.get()),
-                () -> assertTrue(countWrapper.get().getSqlSegment().contains("external_no =")));
+                () -> assertTrue(listWrapper.get().getSqlSegment().contains("ORDER BY id ASC")),
+                () -> assertTrue(listWrapper.get().getSqlSegment().contains("external_no =")),
+                () -> assertTrue(listWrapper.get().getParamNameValuePairs().containsValue("EXT-1")));
     }
 
     @SuppressWarnings("unchecked")
@@ -200,10 +181,40 @@ class BaseDaoImplTest {
                 new Class<?>[]{TestMapper.class}, handler);
     }
 
+    private static final class TestQuery extends Query {
+
+        private final String externalNo;
+
+        private TestQuery(String externalNo) {
+            this.externalNo = externalNo;
+        }
+
+        private String getExternalNo() {
+            return externalNo;
+        }
+    }
+
     private static final class TestDao extends BaseDaoImpl<TestMapper, TestEntity> {
 
         private TestDao(TestMapper baseMapper) {
-            super(baseMapper);
+            // 父类已改为字段注入，测试通过反射设置父类的 baseMapper 字段
+            new DirectFieldAccessor(this).setPropertyValue("baseMapper", baseMapper);
+        }
+
+        @Override
+        public Class<TestEntity> getEntityClass() {
+            return TestEntity.class;
+        }
+
+        @Override
+        public void declareProperties(Query query, WrapperBuilder<TestEntity> builder) {
+            builder.select("id");
+        }
+
+        @Override
+        public void declareWheres(Query query, WrapperBuilder<TestEntity> builder) {
+            TestQuery typedQuery = builder.query(TestQuery.class);
+            builder.addWhere("externalNo", Operator.EQ, typedQuery.getExternalNo());
         }
     }
 

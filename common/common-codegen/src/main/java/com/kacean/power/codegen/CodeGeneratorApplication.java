@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * MyBatis-Plus 代码生成命令行入口：支持交互式操作，也支持脚本化创建业务模块和生成持久化代码。
+ * MyBatis-Plus 代码生成命令行入口：支持交互式操作，也支持脚本化创建业务模块和生成分层业务代码。
  *
  * @author kacean-agent
  */
@@ -27,7 +27,7 @@ public final class CodeGeneratorApplication {
     private static final Set<String> MODULE_OPTIONS = Set.of("business", "subdomain");
     private static final Set<String> GENERATE_OPTIONS = Set.of(
             "business", "subdomain", "jdbc-url", "username", "password-env", "schema", "tables",
-            "table-prefix", "overwrite");
+            "table-prefix", "mode", "overwrite");
 
     private final BufferedReader input;
     private final PrintStream output;
@@ -81,7 +81,8 @@ public final class CodeGeneratorApplication {
         Path projectRoot = Path.of("").toAbsolutePath().normalize();
         output.println("MyBatis-Plus 代码生成器");
         output.println("1. 创建业务模块（app / port / deploy）");
-        output.println("2. 从数据库表生成 PO / Mapper / Mapper XML");
+        output.println("2. 从数据库表生成贫血模式代码");
+        output.println("3. 从数据库表生成 DDD 模式代码");
         output.println("0. 退出");
         String choice = prompt("请选择操作", "2");
         switch (choice) {
@@ -97,7 +98,10 @@ public final class CodeGeneratorApplication {
                     printModuleSuccess(business, subdomain);
                 }
             }
-            case "2" -> {
+            case "2", "3" -> {
+                BusinessCodeGenerator.GenerationMode mode = choice.equals("3")
+                        ? BusinessCodeGenerator.GenerationMode.DDD
+                        : BusinessCodeGenerator.GenerationMode.ANEMIC;
                 String business = prompt("业务域名（如 ticket）", "");
                 String subdomain = prompt("子域名（如 tickettype）", "");
                 String jdbcUrl = prompt("JDBC URL", "jdbc:mysql://localhost:3306/power_system?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai");
@@ -109,12 +113,13 @@ public final class CodeGeneratorApplication {
                 boolean overwrite = confirm("覆盖已存在的同名文件", false);
                 output.printf("目标模块：business/%s/%s-port，子域包：com.kacean.power.%s。%n",
                         business, business, subdomain);
-                output.printf("数据表：%s；覆盖已有文件：%s。%n", tables, overwrite ? "是" : "否");
+                output.printf("模式：%s；数据表：%s；覆盖已有文件：%s。%n",
+                        mode.name().toLowerCase(), tables, overwrite ? "是" : "否");
                 if (confirm("确认生成", true)) {
-                    PersistenceCodeGenerator.generate(new PersistenceCodeGenerator.Options(
+                    BusinessCodeGenerator.generate(new BusinessCodeGenerator.Options(
                             projectRoot, business, subdomain, jdbcUrl, username, password, schema,
-                            splitList(tables), splitList(tablePrefix), overwrite));
-                    printGenerateSuccess(business, subdomain);
+                            splitList(tables), splitList(tablePrefix), mode, overwrite));
+                    printGenerateSuccess(business, subdomain, mode);
                 }
             }
             case "0" -> output.println("已退出。");
@@ -132,7 +137,9 @@ public final class CodeGeneratorApplication {
     private void generate(Path projectRoot, Arguments arguments) {
         String passwordEnvironment = arguments.value("password-env", DEFAULT_PASSWORD_ENV);
         String password = environment.getOrDefault(passwordEnvironment, "");
-        PersistenceCodeGenerator.generate(new PersistenceCodeGenerator.Options(
+        BusinessCodeGenerator.GenerationMode mode = BusinessCodeGenerator.GenerationMode.from(
+                arguments.value("mode", "anemic"));
+        BusinessCodeGenerator.generate(new BusinessCodeGenerator.Options(
                 projectRoot,
                 arguments.required("business"),
                 arguments.required("subdomain"),
@@ -142,8 +149,9 @@ public final class CodeGeneratorApplication {
                 arguments.value("schema", ""),
                 splitList(arguments.required("tables")),
                 splitList(arguments.value("table-prefix", "")),
+                mode,
                 arguments.flag("overwrite")));
-        printGenerateSuccess(arguments.required("business"), arguments.required("subdomain"));
+        printGenerateSuccess(arguments.required("business"), arguments.required("subdomain"), mode);
     }
 
     private Path resolveProjectRoot(Arguments arguments) {
@@ -188,32 +196,43 @@ public final class CodeGeneratorApplication {
 
     private void printModuleSuccess(String business, String subdomain) {
         output.println("业务模块创建完成：" + business);
-        output.println("下一步：在 docs/domain/glossary.md 登记子域术语，然后执行 generate 生成 " + subdomain + " 的持久化代码。");
+        output.println("下一步：在 docs/domain/glossary.md 登记子域术语，然后执行 generate --mode anemic 或 --mode ddd 生成 " + subdomain + " 的代码。");
     }
 
-    private void printGenerateSuccess(String business, String subdomain) {
-        output.println("代码生成完成。");
-        output.printf("PO：business/%s/%s-port/src/main/java/com/kacean/power/%s/port/infra/persistence/po%n",
+    private void printGenerateSuccess(String business, String subdomain, BusinessCodeGenerator.GenerationMode mode) {
+        output.println("代码生成完成，模式：" + mode.name().toLowerCase() + "。");
+        output.printf("Entity：business/%s/%s-port/src/main/java/com/kacean/power/%s/port/infra/entity%n",
                 business, business, subdomain);
-        output.printf("Mapper：business/%s/%s-port/src/main/java/com/kacean/power/%s/port/infra/persistence/mapper%n",
+        output.printf("Mapper：business/%s/%s-port/src/main/java/com/kacean/power/%s/port/infra/mapper%n",
                 business, business, subdomain);
         output.printf("XML：business/%s/%s-port/src/main/resources/mapper/%s%n", business, business, subdomain);
-        output.println("请审查字段映射，并按需补充纯 Java 领域对象、仓储适配与 Web 代码。");
+        output.printf("Web：business/%s/%s-port/src/main/java/com/kacean/power/%s/port/web%n",
+                business, business, subdomain);
+        output.println("DAO / CURD：business/" + business + "/" + business
+                + "-port/src/main/java/com/kacean/power/" + subdomain + "/port/infra/{dao,curd}");
+        if (mode == BusinessCodeGenerator.GenerationMode.DDD) {
+            output.printf("Domain / Repository：business/%s/%s-app/src/main/java/com/kacean/power/%s/app/{domain,repo}%n",
+                    business, business, subdomain);
+            output.printf("Convert / RepositoryImpl：business/%s/%s-port/src/main/java/com/kacean/power/%s/port/infra/{convert,repo}%n",
+                    business, business, subdomain);
+        }
+        output.println("请审查字段映射与生成代码，再补充业务约束和特有用例。");
     }
 
     private void printHelp() {
         output.println("用法：");
         output.println("  无参数：进入交互式菜单");
         output.println("  module --business <业务域> --subdomain <子域>");
-        output.println("  generate --business <业务域> --subdomain <子域> --jdbc-url <URL> --tables <表1,表2> [选项]");
+        output.println("  generate --business <业务域> --subdomain <子域> --jdbc-url <URL> --tables <表1,表2> [--mode <anemic|ddd>] [选项]");
         output.println("generate 选项：");
         output.println("  --username <用户>                 数据库用户名，默认空");
         output.println("  --password-env <环境变量名>        密码环境变量，默认 CODEGEN_DB_PASSWORD");
         output.println("  --schema <schema>                数据库 schema");
         output.println("  --table-prefix <前缀1,前缀2>       生成类名时移除表前缀");
+        output.println("  --mode <anemic|ddd>               生成模式，默认 anemic；DDD 在贫血产物上追加 domain/repo/convert");
         output.println("  --overwrite                       覆盖同名文件；默认保留已有文件");
         output.println("  --project-root <目录>             项目根目录，默认当前目录");
-        output.println("持久化约定：PO 继承 common-infra BaseEntity，主键固定为 Long + ASSIGN_ID。");
+        output.println("持久化约定：Entity 继承 common-infra BaseEntity，主键固定为 Long + ASSIGN_ID。");
         output.println("安全约束：不支持通过命令行参数传递数据库密码。");
     }
 

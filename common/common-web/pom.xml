@@ -23,20 +23,27 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
-            <scope>provided</scope>
+        </dependency>
+        <!-- DTO JSON 注解：@JsonFormat 等，仅注解包，序列化运行时由 runner 的 Boot Web 提供 -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
         </dependency>
         <!-- Swagger 注解：@Operation/@Parameter/@Schema 等，仅注解包，文档运行时由 runner 的 springdoc 提供 -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>
             <artifactId>swagger-annotations-jakarta</artifactId>
-            <scope>provided</scope>
         </dependency>
-        <!-- common-app 提供 ID、PageQuery/PageResult 等应用层公共类型，供通用 MVC 能力按需使用；BaseController 当前为空基类，不调用应用服务 -->
+        <!-- common-infra 提供 BaseEntity、BaseDao、BaseCurd 等持久化与通用 CRUD 类型，供 CurdController 与 DddController 实现通用 CRUD 端点 -->
         <dependency>
             <groupId>com.kacean.power</groupId>
             <artifactId>common-infra</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>common-app</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 

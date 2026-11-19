@@ -12,14 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 查询参数契约测试，固定默认查询属性与业务 record 实现契约的方式。
+ * 查询参数基类测试，固定 QP 继承方式、公共属性默认值与排序列表不可变快照语义。
  *
  * @author kacean-agent
  */
 class QueryTest {
 
     @Test
-    void 未覆盖通用查询属性_使用默认空值() {
+    void 未设置通用查询属性_使用默认空值() {
         Query query = new EmptyQuery();
 
         assertAll(
@@ -28,27 +28,48 @@ class QueryTest {
     }
 
     @Test
-    void 业务查询参数实现契约_排序列表使用不可变快照() {
+    void 业务查询参数继承基类_公共属性与业务字段均可访问() {
         List<Sort> sorts = new ArrayList<>(List.of(new Sort("name", SortDirection.ASC)));
         TicketQueryParam query = new TicketQueryParam("EXT-1", "keyword", sorts);
 
         sorts.add(new Sort("code", SortDirection.DESC));
 
         assertAll(
-                () -> assertEquals("EXT-1", query.externalNo()),
+                () -> assertEquals("EXT-1", query.getExternalNo()),
+                () -> assertEquals("keyword", query.getKeyword()),
                 () -> assertEquals("keyword", query.keyword()),
                 () -> assertEquals(1, query.sorts().size()),
                 () -> assertThrows(UnsupportedOperationException.class,
-                        () -> query.sorts().add(new Sort("code", SortDirection.DESC))));
+                        () -> query.getSorts().add(new Sort("code", SortDirection.DESC))));
     }
 
-    private record EmptyQuery() implements Query {
+    @Test
+    void 设置排序列表_保存不可变快照并将null归一为空列表() {
+        TicketQueryParam query = new TicketQueryParam("EXT-1", null, null);
+        List<Sort> sorts = new ArrayList<>(List.of(new Sort("name", SortDirection.ASC)));
+
+        query.setSorts(sorts);
+        sorts.clear();
+
+        assertEquals(1, query.sorts().size());
+        query.setSorts(null);
+        assertTrue(query.sorts().isEmpty());
     }
 
-    private record TicketQueryParam(String externalNo, String keyword, List<Sort> sorts) implements Query {
+    private static final class EmptyQuery extends Query {
+    }
 
-        private TicketQueryParam {
-            sorts = sorts == null ? List.of() : List.copyOf(sorts);
+    private static final class TicketQueryParam extends Query {
+
+        private final String externalNo;
+
+        private TicketQueryParam(String externalNo, String keyword, List<Sort> sorts) {
+            super(keyword, sorts);
+            this.externalNo = externalNo;
+        }
+
+        private String getExternalNo() {
+            return externalNo;
         }
     }
 }

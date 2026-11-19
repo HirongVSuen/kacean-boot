@@ -1,11 +1,11 @@
 package com.kacean.power.common.infra.mapper;
 
-import com.kacean.power.common.infra.po.BaseEntity;
+import com.kacean.power.common.infra.entity.BaseEntity;
 
 /**
  * MyBatis 基础 Mapper：统一业务持久化 Mapper 的父接口，直接继承 MyBatis-Plus 原生 BaseMapper 能力。
  * 业务 Mapper 继承本接口后即可使用 QueryWrapper、LambdaQueryWrapper 等条件查询与通用单表读写；
- * 本包只承载 MyBatis 持久化 Mapper，MapStruct 转换契约位于 {@code infra.struct} 包，二者不得混用。
+ * 本包只承载 MyBatis 持久化 Mapper，通用 MapStruct 转换契约位于 {@code infra.repo} 包，二者不得混用。
  *
  * @author kacean-agent
  * @param <E> 持久化对象类型

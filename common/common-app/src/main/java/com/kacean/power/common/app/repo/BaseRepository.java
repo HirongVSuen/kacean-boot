@@ -5,7 +5,6 @@ import com.kacean.power.common.app.identity.IDCollection;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 基础仓储接口：只定义聚合真正通用的最小读写能力。
@@ -22,7 +21,7 @@ public interface BaseRepository<D> {
      * 按标识查询聚合，允许不存在。
      *
      * @param id 聚合标识，非空
-     * @return 聚合的 Optional 包装，不存在时为 {@link Optional#empty()}
+     * @return 聚合，不存在时返回 {@code null}
      */
     D findById(ID id);
 

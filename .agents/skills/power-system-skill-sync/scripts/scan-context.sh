@@ -49,18 +49,27 @@ else
   echo "business 目录不存在。"
 fi
 
-section "5. skill 引用类存在性校验（com.kacean.power.*，防虚构）"
+section "5. skill 引用类存在性校验（全限定名与 common 包简写，防虚构）"
 MISSING=0
 if [[ -d .agents/skills ]]; then
   while IFS= read -r fqn; do
     [[ -n "$fqn" ]] || continue
+    # 将 skill 中常用的 common 包简写归一化为真实源码包名。
+    case "$fqn" in
+      com.kacean.power.*) ;;
+      common.app.*|common.infra.*|common.web.*|common.util.*)
+        fqn="com.kacean.power.${fqn}" ;;
+      app.*|infra.*|web.*|util.*)
+        fqn="com.kacean.power.common.${fqn}" ;;
+      *) continue ;;
+    esac
     rel="${fqn//./\/}.java"
     if ! find . -type d -name target -prune -o -type f -path "*/src/main/java/$rel" -print -quit | grep -q .; then
       echo "缺失：$fqn"
       MISSING=$((MISSING + 1))
     fi
-  done < <(grep -rhoE 'com\.kacean\.power\.[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*' .agents/skills --include='*.md' \
-    | grep -E '\.[A-Z][A-Za-z0-9_]*$' | sort -u)
+  done < <(grep -rhoE '(com\.kacean\.power\.[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*|`(common\.)?(app|infra|web|util)(\.[A-Za-z0-9_]+)+`)' .agents/skills --include='*.md' \
+    | tr -d '`' | grep -E '\.[A-Z][A-Za-z0-9_]*$' | sort -u)
 fi
 if [[ "$MISSING" == "0" ]]; then
   echo "全部存在。"

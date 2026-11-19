@@ -7,7 +7,7 @@
 ## 文档
 
 - [领域术语表](docs/domain/glossary.md)：业务术语、代码命名与禁用叫法的唯一来源，涉及业务命名或领域建模前先阅读。
-- [MyBatis-Plus 代码生成](.agents/skills/power-system-codegen/SKILL.md)：开发期业务模块脚手架与按子域生成 PO、Mapper、Mapper XML。
+- [业务代码生成](.agents/skills/power-system-codegen/SKILL.md)：开发期业务模块脚手架，以及按子域生成贫血或 DDD 模式的 Entity、Mapper、XML、DAO/CURD、Web 与领域/仓储代码。
 - [持久化公共字段 DDL](common/common-infra/README.md)：`BaseEntity` 主键策略、公共列类型与 MySQL 示例表结构。
 - [统一响应体](common/common-web/README.md)：`Result` 响应码、字段错误与序列化边界。
 
@@ -52,7 +52,7 @@ power-system/
     └── tickettype-contract/             tickettype 子域对外契约（Facade/DTO/事件）
 ```
 
-`common-web`、`common-app`、`common-infra`、`common-util` 均为普通 jar 依赖模块，不作为业务模块的 parent。`common-web` 依赖 `spring-webmvc`、`common-app` 与 `swagger-annotations-jakarta`（仅注解包），承载通用 MVC 能力，现有 `BaseController`（当前为空基类）、MapStruct `BaseAssembler`、统一响应体 `Result`；`common-app` 提供 Spring Context DI 与通用应用层类型，现有领域标记接口 `BaseDomain`、用例标记接口 `BaseCase`、通用仓储接口 `BaseRepository`，以及 `ID`、`IDCollection`、`Query`（业务查询参数契约，提供默认关键字与排序访问）、`PageQuery`（组合业务查询参数、页码与页大小）、`PageResult`、`Sort` 等查询模型；`common-infra` 集中基础设施适配的公共代码与依赖，提供带 MyBatis-Plus 注解的持久化 `BaseEntity`、基于 `mybatis-plus-extension` 的 `IRepository` / `AbstractRepository` 扩展的 `BaseDao/BaseDaoImpl`（构造器注入业务 Mapper，支持 `QueryWrapper` / `LambdaQueryWrapper` / `QueryConditionBuilder`，不引入 `mybatis-plus-spring`）、MyBatis 基础 `mapper.BaseMapper`、独立 `struct` 包的 MapStruct `StructMapper` 转换契约、`query.QueryConditionBuilder` 查询条件构建器（实现类覆写 `addProperty` / `addWhere` / `addOrder`）与 `struct.QueryParamStruct` 查询参数转换契约，以及委托基础 DAO 的 `BaseRepositoryImpl`；`common-util` 聚合常用工具库。`common-test` 仅以 `test` scope 被部署模块依赖，不进入运行时 `lib/`。`common-codegen` 提供交互式/命令行代码生成，输出位于目标业务子域的 `port.infra.persistence`，不作为业务或启动模块依赖。
+`common-web`、`common-app`、`common-infra`、`common-util` 均为普通 jar 依赖模块，不作为业务模块的 parent。`common-web` 依赖 `spring-webmvc`、`common-infra`（provided）、`common-app` 与 `swagger-annotations-jakarta`（仅注解包），承载通用 MVC 能力，现有通用 CRUD 基类 `CurdController` 及其 DDD 子类 `DddController`、MapStruct `CurdAssembler` / `DddAssembler`、统一响应体 `Result`；通用端点只在 `CurdController` 定义，DDD 子类增加领域泛型与转换入口；`common-app` 提供 Spring Context DI 与通用应用层类型，现有领域标记接口 `BaseDomain`、用例标记接口 `BaseCase`、通用仓储接口 `BaseRepository`，以及 `ID`、`IDCollection`、`Query`（业务 QP 基类，统一关键字与不可变排序列表）、`PageQuery`（组合业务查询参数、页码与页大小）、`PageResult`、`Sort` 等查询模型；`common-infra` 集中基础设施适配的公共代码与依赖，提供带 MyBatis-Plus 注解的持久化 `BaseEntity`、基于 `mybatis-plus-extension` 的 `IRepository` / `AbstractRepository` 扩展的 `BaseDao/BaseDaoImpl`（`@Autowired` 字段注入业务 Mapper，子类无需构造器，支持 `QueryWrapper` / `LambdaQueryWrapper`，不引入 `mybatis-plus-spring`）、MyBatis 基础 `mapper.BaseMapper`、`repo` 包的 MapStruct `BaseConvert` 转换契约（业务转换接口仍放 `port.infra.convert`）、`query.WrapperBuilder` / `Operator` / `ColumnResolver` 查询构建组件（`BaseDao.toWrapper` 依次执行 DAO 的 `declareProperties` / `declareWheres` 钩子与默认字段 EQ、关键字、排序处理，`list(query)` / `page(pageQuery)` 直接复用），以及委托基础 DAO 的 `BaseCurd` 与 `BaseRepositoryImpl`；`common-util` 聚合常用工具库。`common-test` 仅以 `test` scope 被部署模块依赖，不进入运行时 `lib/`。`common-codegen` 提供交互式/命令行代码生成，默认 `anemic`，可选 `ddd`；输出位于目标业务子域的 `port.web`、`port.infra`，DDD 另输出 `app.domain` / `app.repo`，不作为业务或启动模块依赖。
 
 `standalone-runner` 当前未提供全局异常处理器；后续如需统一异常响应，应基于 `common-web` 的 `Result` 在 runner 侧实现，不下沉到 `common-web`。
 
@@ -95,13 +95,13 @@ standalone-runner
 | 应用服务、command/query、领域模型（纯 Java）、仓储接口 | `<域>-app` | `com.kacean.power.<子域>.app.{service,domain,repository}` |
 | 子域间调用契约（Facade 接口、DTO、领域事件） | `share/<子域>-contract` | `com.kacean.power.<子域>.contract` |
 | 跨业务稳定共享领域类型 | `share/core` | `com.kacean.power.core.share` |
-| 仓储实现、外部客户端、持久化适配 | `<域>-port` | `com.kacean.power.<子域>.port.infra.{persistence,client,config}` |
+| 仓储实现、外部客户端、持久化适配 | `<域>-port` | `com.kacean.power.<子域>.port.infra.{entity,mapper,dao,repo,convert,query,client,config}` |
 
 其中 `<子域>` 为业务子域名，全小写且全局唯一（如 `tickettype`），同一子域在 `app` 与 `port` 中使用相同的分包名；Maven 业务模块仍按业务域聚合（`ticket-app/port`），包名不再包含业务域层级。跨子域调用示例：`ticketorder` 需要工单类型数据时，依赖 `share/tickettype-contract` 并注入 `tickettype.contract.TicketTypeFacade`，由 `tickettype/app` 的 `TicketTypeFacadeImpl` 提供实现，不直接 import `tickettype` 子域任何实现类。
 
 ### app 的 DI 与领域模型
 
-`app` 直接使用 Spring DI。应用服务使用 `@Service` 或 `@Component`，依赖注入优先使用构造器；单构造器场景不需要额外添加 `@Autowired`。
+`app` 直接使用 Spring DI。应用服务使用 `@Service` 或 `@Component`，依赖注入优先使用构造器；单构造器场景不需要额外添加 `@Autowired`。common 通用基类（`BaseDaoImpl`、`BaseCurd`、`BaseRepositoryImpl`、`CurdController`、`DddController`）统一在父类字段上使用 `@Autowired` 注入，由 Spring 按子类泛型解析，业务子类不再声明构造器。
 
 ```java
 @Service
@@ -262,7 +262,7 @@ conf/logback-spring.xml
 
 ### 持久化
 
-`standalone-runner` 已引入 MyBatis-Plus Boot 4 Starter 和 MySQL 运行时驱动，数据源默认连接 `localhost:3306/power_system`，可通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 环境变量覆盖；真实密码不得写入配置仓库。`application.yml` 同时配置 Mapper XML 扫描、下划线转驼峰、`ASSIGN_ID` 主键策略和数值逻辑删除值；当前 runner 未配置 `MetaObjectHandler` 公共字段填充处理器，也不存在 `OperatorContext`，`common-infra` `BaseEntity` 中声明 `FieldFill` 的外部编号与审计字段需后续补充填充处理器才会自动赋值。业务持久化应在对应 `port` 新增 PO、Mapper 与仓储适配，不改变 `app` 层仓储契约，也不使用 JPA。
+`standalone-runner` 已引入 MyBatis-Plus Boot 4 Starter 和 MySQL 运行时驱动，数据源默认连接 `localhost:3306/power_system`，可通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 环境变量覆盖；真实密码不得写入配置仓库。`application.yml` 同时配置 Mapper XML 扫描、下划线转驼峰、`ASSIGN_ID` 主键策略和数值逻辑删除值；当前 runner 未配置 `MetaObjectHandler` 公共字段填充处理器，也不存在 `OperatorContext`，`common-infra` `BaseEntity` 中声明 `FieldFill` 的外部编号与审计字段需后续补充填充处理器才会自动赋值。业务持久化应在对应 `port` 新增 Entity、Mapper 与仓储适配，不改变 `app` 层仓储契约，也不使用 JPA。
 
 ### 静态资源
 

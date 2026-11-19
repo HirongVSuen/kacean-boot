@@ -24,7 +24,6 @@
             <groupId>com.kacean.power</groupId>
             <artifactId>common-app</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
         </dependency>
         <!-- 持久化注解、Wrapper 条件、IRepository/AbstractRepository 与 MyBatis Mapper API 暴露给业务 port；不引入 mybatis-plus-spring、Starter、数据源或 JDBC 驱动 -->
         <!-- BaseDao 扩展 IRepository，BaseDaoImpl 继承 AbstractRepository；extension 传递 core，批量方法逐条实现以脱离 Spring 批处理 -->

@@ -1,10 +1,13 @@
 package com.kacean.power.common.infra.curd;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.kacean.power.common.app.identity.ID;
 import com.kacean.power.common.app.identity.IDCollection;
+import com.kacean.power.common.app.query.PageQuery;
+import com.kacean.power.common.app.query.PageResult;
+import com.kacean.power.common.app.query.Query;
 import com.kacean.power.common.infra.dao.BaseDao;
-import com.kacean.power.common.infra.po.BaseEntity;
+import com.kacean.power.common.infra.entity.BaseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.Serializable;
@@ -12,25 +15,17 @@ import java.util.*;
 import java.util.function.Function;
 
 /**
- * 基础CURD操作类
+ * 基础CURD操作类：通过 {@code @Autowired} 字段注入业务 DAO，依赖由 Spring 按子类泛型解析注入，子类无需声明构造器。
  *
  * @author hirong
  */
 public class BaseCurd<E extends BaseEntity, D extends BaseDao<E>> {
 
     /**
-     * 持久层对象
+     * 持久层对象，由 Spring 按子类泛型注入
      */
-    private final D dao;
-
-    /**
-     * 构造方法
-     *
-     * @param baseDao 持久层对象
-     */
-    protected BaseCurd(D baseDao) {
-        this.dao = Objects.requireNonNull(baseDao, "baseDao 不能为空");
-    }
+    @Autowired
+    private D dao;
 
     /**
      * 获取持久层对象
@@ -213,40 +208,11 @@ public class BaseCurd<E extends BaseEntity, D extends BaseDao<E>> {
     }
 
     /**
-     * 分页查询单表数据
-     *
-     * @param page 分页条件
-     * @return 列表数据
-     * @since 3.5.3.2
-     */
-    public List<E> list(IPage<E> page) {
-        return dao.list(page);
-    }
-
-    /**
-     * 无条件翻页查询
-     *
-     * @param page 翻页对象
-     */
-    public <P extends IPage<E>> P page(P page) {
-        return dao.page(page);
-    }
-
-    /**
      * 查询所有列表
      *
      */
     public List<Map<String, Object>> listMaps() {
         return dao.listMaps();
-    }
-
-    /**
-     * 查询列表
-     *
-     * @param page 分页条件
-     */
-    public List<Map<String, Object>> listMaps(IPage<? extends Map<String, Object>> page) {
-        return dao.listMaps(page);
     }
 
     /**
@@ -266,12 +232,20 @@ public class BaseCurd<E extends BaseEntity, D extends BaseDao<E>> {
     }
 
     /**
-     * 无条件翻页查询
+     * 根据分页查询
      *
-     * @param page 翻页对象
+     * @param pageQuery 分页查询对象
      */
-    public <P extends IPage<Map<String, Object>>> P pageMaps(P page) {
-        return dao.pageMaps(page);
+    public PageResult<E> page(PageQuery<? extends Query> pageQuery) {
+        return dao.page(pageQuery);
     }
 
+    /**
+     * 根据查询条件查询列表
+     *
+     * @param query 查询条件
+     */
+    public List<E> list(Query query) {
+        return dao.list(query);
+    }
 }

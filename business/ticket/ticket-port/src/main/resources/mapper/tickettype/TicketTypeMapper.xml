@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kacean.power.tickettype.port.infra.mapper.TicketTypeMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.kacean.power.tickettype.port.infra.entity.TicketTypeEntity">
+        <id column="id" property="id" />
+        <result column="external_no" property="externalNo" />
+        <result column="deleted" property="deleted" />
+        <result column="create_at" property="createAt" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_at" property="modifyAt" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="version" property="version" />
+        <result column="ticket_type_name" property="ticketTypeName" />
+        <result column="catalog_no" property="catalogNo" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id,
+        external_no,
+        deleted,
+        create_at,
+        create_by,
+        modify_at,
+        modify_by,
+        version,
+        ticket_type_name, catalog_no
+    </sql>
+
+</mapper>

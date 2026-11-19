@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>common-codegen</artifactId>
-    <description>开发期代码生成工具：创建业务模块脚手架并生成 MyBatis-Plus 持久化代码，不进入运行时分发包</description>
+    <description>开发期代码生成工具：创建业务模块脚手架并按贫血或 DDD 模式生成分层业务代码，不进入运行时分发包</description>
 
     <dependencies>
         <!-- generator 将核心依赖标为 optional，使用 IdType 与 Mapper 注解时必须显式声明 -->
@@ -43,6 +43,30 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <!-- 生成源码编译测试需要真实的公共基类与 Spring Web 类型，不进入生成器运行时。 -->
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>common-app</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>common-web</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.kacean.power</groupId>
+            <artifactId>common-infra</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.h2database</groupId>

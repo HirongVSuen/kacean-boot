@@ -6,7 +6,7 @@
     <!-- 通用查询映射结果 -->
     <resultMap id="BaseResultMap" type="${package.Entity}.${entity}">
 <#list table.commonFields as field>
-<#if field.keyFlag>
+<#if field_index == 0>
         <id column="${field.name}" property="${field.propertyName}" />
 <#else>
         <result column="${field.name}" property="${field.propertyName}" />

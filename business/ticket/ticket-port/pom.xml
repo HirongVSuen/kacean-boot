@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>ticket-port</artifactId>
-    <description>工单-端口层：web 包承载 Spring MVC Controller、DTO、assembler，infra 包承载仓储实现、外部客户端，均只调用 app 层</description>
+    <description>工单-端口层：web 包承载 Spring MVC Controller、DTO、assembler，infra 包承载持久化与外部适配；贫血 CRUD 允许 web 直调 infra</description>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -32,12 +32,23 @@
             <artifactId>common-infra</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!-- web 与 infra 均只调用 app 层应用服务与仓储接口，方向为 port → app -->
+        <!-- DDD 适配方向为 port → app；app 不反向依赖 port -->
         <dependency>
             <groupId>com.kacean.power</groupId>
             <artifactId>ticket-app</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+                <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-core</artifactId>
+        </dependency>
+
     </dependencies>
 
 </project>
