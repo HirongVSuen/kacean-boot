@@ -13,6 +13,7 @@ description: power-system 项目构建、模块与依赖调整、thin jar 分发
 - 顶层仅 `runner`、`common`、`business`、`share`。目录名与 artifactId 一致；`<modules>` 只负责聚合，`<dependencies>` 决定构建顺序和运行时内容。
 - 使用 **thin jar + assembly 外置依赖**。禁止 Spring Boot `repackage` 和 assembly `jar-with-dependencies`。
 - 日志目录固定为 `.logs/`；bat 文件必须纯 ASCII；sh 启动脚本保留 Cygwin 路径转换，并以 `APP_HOME` 为工作目录。
+- Windows 直接执行的 `.ps1` 必须兼容 Windows PowerShell 5.1；含中文时保存为 UTF-8 BOM，避免 5.1 按 ANSI 误读。
 
 ## 2. 当前模块与依赖边界
 
@@ -42,7 +43,7 @@ power-system
 
 - `common-web/common-app/common-infra/common-util/common-codegen` 均为普通 jar 模块，不作为业务 parent；其中 `common-codegen` 只由开发期脚本直接启动，不被业务或 runner 依赖。
 - `common-web` 直接依赖 `spring-webmvc`、`common-infra`、`common-app`、`jackson-annotations` 与 `swagger-annotations-jakarta`（后两者仅注解包），提供 `BaseDTO`、`CurdController<DTO, ENTITY, CURD>` 通用 CRUD 基类及其子类 `DddController<DTO, DOMAIN, ENTITY, CURD>`、`CurdAssembler<DTO, ENTITY>` 及其子类 `DddAssembler<DTO, DOMAIN, ENTITY>`、统一响应体 `Result`（`common.web.response`）。通用端点只在 `CurdController` 声明，DDD 子类只增加领域泛型与转换入口，不得加入 Boot Starter、Tomcat 或 Jackson 序列化运行时；`Result` 的响应码与序列化边界见 `common/common-web/README.md`。`standalone-runner` 通过 `spring-boot-starter-webmvc` 提供嵌入式容器、Jackson 和 Boot MVC 自动配置，并通过 `springdoc-openapi-starter-webmvc-ui` 提供 Swagger 文档（`/swagger-ui/index.html`、`/v3/api-docs`）；当前 runner 未提供全局异常处理器，后续新增时应基于 `Result` 放在 runner 侧，不下沉到 common-web。
-- `common-app` 只提供 `spring-context` 与通用应用层类型：领域标记接口 `BaseDomain`（`common.app.domain`）、可选用例基类 `BaseCase<D extends BaseDomain>`（`common.app.usecase`，构造器接收 `BaseRepository<D>` 并提供受保护的 `getRepository()`，不是标记接口）、通用仓储接口 `BaseRepository`（`common.app.repo`，仅定义最小读写能力，`findById` 未命中返回 `null`），以及标识模型 `ID`/`IDCollection`（`common.app.identity`）、业务查询参数基类 `Query` 与 `PageQuery`/`PageResult`/`Sort` 等查询模型（`common.app.query`）；业务 QP 继承 `Query`，统一关键字与不可变排序列表，`PageQuery` 组合业务查询参数、页码与页大小。领域模型保持纯 Java，不定义持久化实体基类或应用服务基类；审计字段由 infra 的持久化 `BaseEntity` 声明，填充机制由运行侧按需配置。具体持久化实现放在 port/deploy/runner，不放入 app。
+- `common-app` 只提供 `spring-context` 与通用应用层类型：领域标记接口 `BaseDomain`（`common.app.domain`）、可选用例基类 `BaseCase<D extends BaseDomain>`（`common.app.usecase`，构造器接收 `BaseRepository<D>` 并提供受保护的 `getRepository()`，不是标记接口）、通用仓储接口 `BaseRepository`（`common.app.repo`，仅定义最小读写能力，查询方法语义见 `power-system-naming`），以及标识模型 `ID`/`IDCollection`（`common.app.identity`）、业务查询参数基类 `Query` 与 `PageQuery`/`PageResult`/`Sort` 等查询模型（`common.app.query`）；业务 QP 继承 `Query`，统一关键字与不可变排序列表，`PageQuery` 组合业务查询参数、页码与页大小。领域模型保持纯 Java，不定义持久化实体基类或应用服务基类；审计字段由 infra 的持久化 `BaseEntity` 声明，填充机制由运行侧按需配置。具体持久化实现放在 port/deploy/runner，不放入 app。
 - `common-infra` 依赖 common-app、`mybatis-plus-extension`（传递 core，提供 `IRepository`/`AbstractRepository`）与 `spring-tx`，不引入 `mybatis-plus-spring`、Starter、数据源或 JDBC 驱动。`com.kacean.power.common.infra.entity.BaseEntity` 是带 MyBatis-Plus 注解的持久化对象基类，与 app 的纯 Java 领域模型（`BaseDomain`）不同，不得放入或用于 `app.domain`；公共字段映射与 DDL 规范见 `common/common-infra/README.md`。公共基类按包划分：
   - `infra.mapper.BaseMapper`：业务 MyBatis Mapper 统一父接口；`mapper` 包只承载 MyBatis Mapper。
   - `infra.dao.BaseDao` / `BaseDaoImpl`：基于 `IRepository` / `AbstractRepository`（不引入 `IService/ServiceImpl`），`@Autowired` 字段注入业务 Mapper（按子类泛型解析，子类无需构造器）；通用 CRUD 与 `QueryWrapper`/`LambdaQueryWrapper` 条件查询由 `IRepository` 提供，另增 `ID`/`IDCollection` 访问方法（`id` 主键与 `code` 外部编号二选一，批量条件 OR 组合、空集合短路）；批量保存与更新使用 MyBatis-Plus 批量能力；事务以实际方法注解和 Spring 代理边界为准，不因方法名推定整体原子性。`saveOrUpdate` 按 BaseEntity 的 Long id 判定插入或更新；`BaseRepository.saveAll/removeByIds` 不默认保证原子性，需要整体提交或回滚时由调用方建立事务边界。
@@ -51,7 +52,7 @@ power-system
   - `infra.curd.BaseCurd`：`@Autowired` 字段注入 `BaseDao` 的通用 CRUD 委托基类（子类无需构造器）；部分批量写方法声明 `@Transactional(rollbackFor = Exception.class)`，并非所有同名批量方法都有事务注解，具体以实际方法为准。
   - `infra.repo.BaseRepositoryImpl`：实现 common-app 的 `BaseRepository`，`@Autowired` 字段注入 `BaseDao` 与 `BaseConvert`（子类无需构造器），保存后返回由持久化 Entity 重新转换、包含主键与版本号的聚合；特有查询通过受保护的 `dao()`/`converter()` 扩展。
   具体业务 DAO、转换器与仓储仍在各自 port 模块扩展，MyBatis-Plus 类型不得进入 app 层仓储接口。持久化 Provider 由实际运行模块配置。
-- 不引入 JPA/Hibernate；ticket（tickettype）子域当前已有 `TicketTypeEntity`、`TicketTypeMapper` 与 XML 持久化代码，尚无 app 领域对象、仓储或应用服务实现。登录上下文契约与 Provider SPI 独立为 `share/logincontext-contract`（`com.kacean.power.logincontext.contract`），`LoginManager` 实现位于 standalone-runner（`com.kacean.power.runner.logincontext`，运行时编排组件，不属于业务代码），Provider 负责填充统一 `LoginContext`；契约语义、Provider 放置与开发期模拟边界见 `power-system-share`。`standalone-runner` 已统一引入 MyBatis-Plus Boot 4 Starter 和 MySQL 运行时驱动，`application.yml` 通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 配置数据源，真实密码不得提交。`common-codegen` 的元数据驱动仅供开发期使用；Starter、JDBC 驱动和数据源配置只放 runner，不得下沉到 app。
+- 不引入 JPA/Hibernate；ticket（tickettype）子域当前已有 `TicketTypeEntity`、`TicketTypeMapper` 与 XML 持久化代码，尚无 app 领域对象、仓储或应用服务实现。登录上下文契约、Provider 放置、运行时语义与开发期模拟边界见 `power-system-share` §4。`standalone-runner` 已统一引入 MyBatis-Plus Boot 4 Starter 和 MySQL 运行时驱动，`application.yml` 通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 配置数据源，真实密码不得提交。`common-codegen` 的元数据驱动仅供开发期使用；Starter、JDBC 驱动和数据源配置只放 runner，不得下沉到 app。
 - maven-compiler-plugin 版本由根 POM pluginManagement 统一管理，不得回退到 Maven 默认绑定的旧版本。
 - 依赖方向：`port → app` 与 `deploy → 业务模块`；app 不依赖 port。**DDD 前期贫血模式下，port 内 web 可直接调用 infra**（简单 CRUD 不绕道 app），infra 不得反向依赖 web；业务复杂度上升后才由 app 承载用例编排，此时 web 改为调用 app 应用服务。
 - `share/core` 只放稳定、无单一业务归属的跨业务共享领域类型，不依赖其他项目模块或框架。
@@ -108,13 +109,20 @@ ArchUnit 守护 Java 代码依赖方向、子域分包隔离与子域契约约�
 
 ## 6. 标准验证
 
-构建、依赖、结构、打包、脚本或日志改动后执行：
+构建、依赖、结构、打包、脚本或日志改动后执行。Windows / DSH 使用 PowerShell 5.1+（首行仅放宽当前进程的执行策略，不修改系统设置）：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+& .agents/skills/power-system-build/scripts/verify.ps1 -Port 8080
+```
+
+Git Bash / Linux / macOS：
 
 ```bash
 sh .agents/skills/power-system-build/scripts/verify.sh        # 默认 8080，可传端口参数
 ```
 
-脚本自动完成全量构建、解压、启动、断言和清理，失败也会清理。断言包括：构建成功、出现 `Started PowerSystemApplication`、`/`、`/index.html`、Swagger UI 与 OpenAPI JSON 返回 200、生成 `.logs/power-system.log`，最后停止应用并删除 `target/dist-verify`。
+两套脚本均自动完成全量构建、解压、启动、断言和清理，失败也会清理。断言包括：构建成功、出现 `Started PowerSystemApplication`、`/`、`/index.html`、Swagger UI 与 OpenAPI JSON 返回 200、生成 `.logs/power-system.log`，最后停止应用并删除 `target/dist-verify`。
 
 ## 7. 运行资源与分发约定
 

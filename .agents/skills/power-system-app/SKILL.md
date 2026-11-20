@@ -36,7 +36,7 @@ com.kacean.power.<子域>.app
 | 仓储接口 `TicketTypeRepository` | `repo` | 无 | 只定义持久化抽象，可继承 common-app `BaseRepository<D>` 复用最小读写；实现放 `port.infra` |
 | 领域对象 | `domain` | 无 | 纯 Java，不依赖 Spring、Web、持久化 |
 
-`BaseCase<D extends BaseDomain>` 是构造器接收 `BaseRepository<D>`、通过受保护的 `getRepository()` 暴露仓储的**可选用例基类**，不是标记接口；`XxxService` 与复杂用例均不强制继承。
+`BaseCase<D extends BaseDomain>` 是**可选用例基类**，`XxxService` 与复杂用例均不强制继承；构造器与仓储访问签名见 `power-system-build` §2。
 
 ## 3. 调用方向
 
@@ -56,9 +56,9 @@ facade 实现 ────┘        └──────────（常规�
 ## 4. 开发步骤
 
 1. 阅读 `docs/domain/glossary.md`，新领域概念同步术语表。
-2. 默认在 `service` 的 `XxxService` 中增加用例方法（业务复杂度足够时），方法名与用例对应（`define` / `revise`）；按标识查询用 `findById` 返回 `Optional`，必须存在用 `getRequired...`。简单 CRUD 可不建应用服务，由 web 直调 infra。
+2. 默认在 `service` 的 `XxxService` 中增加用例方法（业务复杂度足够时），用例命令、查询与必须存在语义的方法命名和返回类型遵循 `power-system-naming`。简单 CRUD 可不建应用服务，由 web 直调 infra。
 3. 用例复杂时再抽 `service/usecase` 动词类，`XxxService` 保持编排入口；不要按行数机械拆分。
-4. 需要保存时在 `repo` 定义接口，由 `port.infra` 提供实现；app 不出现具体持久化技术。通用读写可继承 common-app 的 `BaseRepository<D>`（`findById`/`findByIds`/`save`/`saveAll`/`removeById`/`removeByIds`），其中 `findById` 按基类签名返回 `D`，未命中为 `null`，不要当作 `Optional<D>` 使用；标识使用 `ID`（`id` 主键与 `code` 外部编号二选一）与 `IDCollection`（去重后最多 1000 个标识），批量写不默认保证原子性。infra 侧继承 `BaseRepositoryImpl`，由父类按泛型注入 `BaseDao` 与 `BaseConvert`，保存后返回由持久化 Entity 重新转换、包含主键与版本号的聚合；基类清单见 `power-system-build` 与 `common/common-infra/README.md`。分页查询不进通用接口，由业务仓储按自身条件声明，复用 `PageQuery`/`Query`/`PageResult`/`Sort` 等 common-app 查询模型；业务 QP 以普通类继承 `Query` 并声明过滤字段，DAO 按需覆写 `declareProperties` / `declareWheres`：前者声明 SELECT、关键字和固定排序，后者通过 `builder.query(XxxQueryParam.class)` 获取具体 QP，并用 `addWhere(field, Operator, value)` 声明特殊条件；`BaseDao.toWrapper` 再依次执行 `processDefaultFields()`（普通字段默认 EQ）、`processKeyword()`、`processOrder()`，业务即可复用 `list(query)` / `page(pageQuery)`。字段统一写 Entity Java 属性，由 `ColumnResolver` 映射数据库列；别名或复杂 `where(...)` 条件用 `markProcessed(...)` 避免重复处理。
+4. 需要保存时在 `repo` 定义接口，由 `port.infra` 提供实现；app 不出现具体持久化技术。通用读写可继承 common-app 的 `BaseRepository<D>`，分页查询不进通用接口，由业务仓储按自身条件声明。基类签名、标识模型、仓储适配、查询扩展与调用顺序以 `power-system-build` §2 为 Skill 层单一说明，字段与 DDL 等细节按需阅读 `common/common-infra/README.md` 和对应源码；方法命名与返回语义见 `power-system-naming`。
 5. 出现真实跨子域调用时，按 `power-system-share` 定义或消费契约；`XxxFacade` 由提供方在 `service/facade` 实现 `XxxFacadeImpl`，Provider SPI 等适配型契约按实际实现环境放置。
 6. 测试使用纯 JUnit + 测试内 fake 仓储（app 测试不依赖 port）；测试方法中文描述与需求场景对应。
 7. 验证：`mvn -pl business/deploy/<域>-deploy -am test`，再按需执行全量 `mvn test`。

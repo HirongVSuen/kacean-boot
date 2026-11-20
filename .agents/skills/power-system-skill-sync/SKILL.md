@@ -7,7 +7,7 @@ description: power-system 业务开发相关 skill 的自更新指南。基础�
 
 **目的**：业务域开发（`power-system-business`）依赖的架构约束与通用组件描述，必须随代码演进自动同步，防止各业务域 agent 基于过期基类、包名或规则开发，造成实现漂移。
 
-**核心原则**：代码是唯一事实来源，skill 是被同步的镜像。本 Skill 只修改 `.agents/skills/**`；发现代码缺陷（引用不存在的类、未完成的桩实现）只报告，不修改通用组件或业务代码；根 `README.md`、`AGENTS.md`、术语表的必要变更在总结中提出建议，由用户确认后处理。
+**核心原则**：代码是唯一事实来源，skill 是被同步的镜像。本 Skill 默认修改 `.agents/skills/**`；新增、重命名或删除 Skill 时可同步根 `AGENTS.md` 路由表，其他根 README、术语表必要变更仍在总结中提出建议，由用户确认后处理。发现代码缺陷（引用不存在的类、未完成的桩实现）只报告，不修改通用组件或业务代码。
 
 ## 1. 触发与扫描
 
@@ -17,13 +17,20 @@ description: power-system 业务开发相关 skill 的自更新指南。基础�
 - 新增/重命名/删除公共基类、契约类型、技术分包、Maven 模块。
 - 用户明确要求同步或校验 skill。
 
-在仓库根目录执行扫描：
+在仓库根目录执行扫描。Windows / DSH 使用 PowerShell 5.1+（首行仅放宽当前进程的执行策略，不修改系统设置）：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+& .agents/skills/power-system-skill-sync/scripts/scan-context.ps1
+```
+
+Git Bash / Linux / macOS：
 
 ```bash
 bash .agents/skills/power-system-skill-sync/scripts/scan-context.sh
 ```
 
-脚本输出：未提交变更、通用组件公共类清单、ArchUnit 规则数、业务域代码分布、各 skill 引用类存在性校验（防虚构）。再补充收集变化范围：
+脚本默认输出有界摘要：未提交变更数量、通用组件与业务源码数量、ArchUnit 规则数、Skill 路由/链接/引用校验、目标部署模块及验证命令。完整清单使用 `-Verbose` 或 `--verbose`。再补充收集变化范围：
 
 ```bash
 git status --short
@@ -46,7 +53,7 @@ git log --oneline -5        # 已提交的重构同样纳入核对
 | `runner/**`（Starter、数据源、填充器、assembly、脚本、日志） | `power-system-build` §2/§6/§7；`power-system-codegen` `references/runtime-setup.md` §2/§3/§4 |
 | `share/core`、`share/<子域>-contract` | `power-system-share` 全文；`power-system-build` §2/§3；`power-system-business` §2 跨子域与共享类型行 |
 | `docs/domain/glossary.md` | `power-system-naming`、`power-system-app`、`power-system-share`、`power-system-business` 中的术语与示例类名 |
-| 新增业务开发规范（新角色、新分包、新约定） | 先归入单一来源 skill，其余 skill 只引用不复制；必要时更新 `power-system-business` 复用矩阵 |
+| 新增业务开发规范或 Skill（新角色、新分包、新约定） | 先归入单一来源 skill，其余 skill 只引用不复制；必要时更新 `power-system-business` 复用矩阵；新增、重命名或删除 Skill 时同步根 `AGENTS.md` 路由表 |
 
 未列出的变化（如纯业务实现细节）不触发 skill 更新。
 
@@ -59,9 +66,11 @@ git log --oneline -5        # 已提交的重构同样纳入核对
    - 同步 frontmatter `description`，保证触发词覆盖新能力（路由描述不超过 1024 字符）。
    - 保持单一来源：字段清单、DDL、版本号等易过期细节留在模块 README 或根 POM，skill 只写约束与指针；同一约束在多个 skill 出现时，一处为全文、其余为引用。
    - `power-system-business` 的复用矩阵与红线必须覆盖新增通用组件，确保业务开发能复用到新能力。
+   - 新增、重命名或删除 Skill 时同步根 `AGENTS.md` 路由表，保证所有项目 Skill 可到达且路由目标存在。
+   - Windows 直接执行的 `.ps1` 必须兼容 Windows PowerShell 5.1；含中文时保留 UTF-8 BOM，避免 5.1 按 ANSI 误读。
 4. **校验**（全部通过才算完成）：
-   - 重跑 `scan-context.sh`，第 5 节引用类存在性校验全部存在。
-   - 旧引用清零：`grep -rn "旧包名/旧类名" .agents/skills`。
+   - 按当前环境重跑 `scan-context.ps1` 或 `scan-context.sh`，第 5 节缺失类、未注册 Skill、失效路由、失效链接均为 0。
+   - 旧引用清零：用内容搜索工具（DSH 为 `grep`）在 `.agents/skills` 中搜索旧包名或旧类名。
    - 文档内相对链接（references/scripts/模块 README）真实存在。
    - ArchUnit 规则数等计数与代码一致；写入 skill 的命令真实可执行（脚本路径、模块路径、参数名与生成器 `Options` 一致）。
    - 仅文档改动不必触发全量构建；若同时改了代码，按 `power-system-build` 执行对应模块测试。

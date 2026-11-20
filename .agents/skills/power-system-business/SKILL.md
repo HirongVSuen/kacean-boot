@@ -11,18 +11,20 @@ description: power-system 业务域开发收敛指南。新增或修改 business
 
 ## 1. 开发前自动扫描（必做）
 
-在仓库根目录执行：
+在仓库根目录执行。Windows / DSH 使用 PowerShell 5.1+（首行仅放宽当前进程的执行策略，不修改系统设置）：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+& .agents/skills/power-system-skill-sync/scripts/scan-context.ps1
+```
+
+Git Bash / Linux / macOS：
 
 ```bash
 bash .agents/skills/power-system-skill-sync/scripts/scan-context.sh
 ```
 
-脚本输出事实清单，供后续设计直接使用：
-
-1. 未提交变更摘要（识别进行中的重构，避免基于旧结构开发）。
-2. 通用组件公共类清单（common-web / common-app / common-infra / share）。
-3. ArchUnit 全局规则数量与业务域现有代码分布。
-4. 各 skill 中引用的 `com.kacean.power.*` 类是否真实存在（防虚构校验）。
+脚本输出契约与详细清单开关由 `power-system-skill-sync` §1 单源维护；本节只规定业务开发前必须执行扫描，不复制输出清单。
 
 扫描后还需按任务补读原始事实文件，不得只凭脚本摘要下结论：
 
@@ -44,13 +46,13 @@ bash .agents/skills/power-system-skill-sync/scripts/scan-context.sh
 | 持久化对象 | `infra.entity.BaseEntity`（公共 8 列不重复声明） | `XxxEntity`，放 `port.infra.entity`，优先 codegen 生成 |
 | MyBatis Mapper | `infra.mapper.BaseMapper` | `XxxMapper`，放 `port.infra.mapper` |
 | DAO 通用读写 | `infra.dao.BaseDao` / `BaseDaoImpl`（`IRepository` 能力 + `ID`/`IDCollection` 访问） | `XxxDao` / `XxxDaoImpl`，特有查询用 `getBaseMapper()` + Wrapper 扩展 |
-| 仓储接口 | `common.app.repo.BaseRepository<D>`（最小通用读写，`findById` 未命中返回 `null`） | `XxxRepository`，放 `app.repo`，只加业务特有方法 |
+| 仓储接口 | `common.app.repo.BaseRepository<D>`（最小通用读写，查询方法语义见 `power-system-naming`） | `XxxRepository`，放 `app.repo`，只加业务特有方法 |
 | 仓储实现 | `infra.repo.BaseRepositoryImpl`（父类按泛型注入 DAO + 转换器） | `XxxRepositoryImpl` 子类，特有查询用 `dao()`/`converter()`，转换用 `fromDomain()`/`toDomain()`；保存返回由 Entity 重新转换、包含主键/版本号的聚合 |
 | 领域 ↔ Entity 转换 | `infra.repo.BaseConvert<DOMAIN, ENTITY>`（MapStruct） | `XxxConvert` + `@Mapper(componentModel = "spring")`，放 `port.infra.convert` |
 | 条件 / 分页查询 | app 侧 `Query`、`PageQuery`/`PageResult`/`Sort`；infra 侧 `WrapperBuilder` / `Operator` / `ColumnResolver`；普通 QP 字段自动 EQ | `XxxQueryParam`（普通类，继承 `Query`）；DAO 按需覆写 `declareProperties` / `declareWheres`，特殊条件用 `addWhere`，复杂条件用 `where(...)` + `markProcessed(...)` |
 | 标识与批量 | `common.app.identity.ID` / `IDCollection`（二选一标识、去重、上限 1000） | 不自建标识值对象替代通用场景 |
 | Controller / 响应 | `common-web` `BaseDTO`、`CurdController`/`DddController`、`CurdAssembler`/`DddAssembler`、`Result` | 贫血 CRUD 继承 CURD 基类，DDD 继承 DDD 子类；通用端点只在 `CurdController` 定义，业务类只扩展特有端点与转换 |
-| 领域标记 / 可选用例基类 | `common.app.domain.BaseDomain`；`common.app.usecase.BaseCase<D extends BaseDomain>`（持有 `BaseRepository<D>`，提供受保护的 `getRepository()`） | 领域对象保持纯 Java；`XxxService` 与复杂用例不强制继承 `BaseCase` |
+| 领域标记 / 可选用例基类 | `common.app.domain.BaseDomain`；`common.app.usecase.BaseCase<D extends BaseDomain>`（可选，签名见 `power-system-build` §2） | 领域对象保持纯 Java；`XxxService` 与复杂用例不强制继承 `BaseCase` |
 | 跨子域调用 | 对方 `<子域>-contract` 的 `XxxFacade` / `XxxView` / 管理契约 | 提供方在 `app.service.facade` 实现 `XxxFacadeImpl`；其他契约按 `power-system-share` 接入 |
 | 登录上下文与身份环境适配 | `logincontext-contract` 的 `LoginContextManager` / `LoginContextProvider`，语义见 `power-system-share` | 消费方注入 `LoginContextManager`；Web Provider 放 `port.web.provider`，不新建平行登录上下文或 Provider SPI |
 | 跨业务稳定共享类型 | `share/core` 既有类型 | 新共享类型先进 `share/core`，不在业务间互相 import |

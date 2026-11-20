@@ -5,7 +5,7 @@ description: power-system 项目包、类、方法命名规范。新建/重命�
 
 # power-system 包、类、方法命名规范
 
-命名是架构约束的一部分：包结构与 `XxxFacade` 等命名会被 ArchUnit 强制（见 `common-test` 的 `GlobalArchitectureTest`），注释要求见 `power-system-javadoc`。
+命名是架构约束的一部分：包结构与 `XxxFacade` 等命名会被 ArchUnit 强制（见 `common-test` 的 `GlobalArchitectureTest`），注释要求见 `power-system-javadoc`。方法命名与返回语义以本 Skill 第 4 节为单一来源，其他 Skill 只引用、不复制。
 
 ## 1. 通用原则
 

@@ -73,7 +73,16 @@ public interface TicketTypeFacade {
 
 ## 4. 自检
 
-生成或修改代码后执行（输出应为空）：
+生成或修改代码后执行（输出应为空）。Windows / DSH 使用 PowerShell 5.1+：
+
+```powershell
+Get-ChildItem business, common, share, runner -Recurse -File -Filter '*.java' |
+    Where-Object { $_.FullName -notmatch '[\\/]target[\\/]' } |
+    Where-Object { -not (Select-String -Path $_.FullName -Pattern '@author' -Quiet) } |
+    ForEach-Object { $_.FullName }
+```
+
+Git Bash / Linux / macOS：
 
 ```bash
 find business common share runner -path "*/target" -prune -o -name "*.java" -print | xargs grep -L "@author"

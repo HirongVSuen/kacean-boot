@@ -59,14 +59,14 @@ export DB_PASSWORD='实际密码'
 
 ## 3. 公共字段填充
 
-`BaseEntity` 的外部编号与审计字段声明了 `FieldFill`，需要运行模块提供 `MetaObjectHandler` 才会自动赋值；当前 `standalone-runner` 尚未提供该处理器，也不存在 `OperatorContext`。接入真实数据库时应在 runner 的 `com.kacean.power.config` 新增 `MyBatisPlusMetaObjectHandler` 组件，建议规则：
+`BaseEntity` 的外部编号与审计字段声明了 `FieldFill`，由运行模块提供的 `MetaObjectHandler` 自动赋值；`standalone-runner` 已提供 `com.kacean.power.config.MyBatisPlusMetaObjectHandler`，规则如下：
 
 - `externalNo` 插入时使用带连字符的标准 UUID（36 字符），已有值不覆盖。
-- 插入时初始化 `deleted = 0`、`version = 0` 以及创建、修改审计字段。
-- 创建人、修改人取自运行侧操作人上下文（后续引入），未设置时使用 `system`。
-- 更新时只刷新 `modifyAt` 和 `modifyBy`。
+- 插入时初始化 `deleted = 0`、`version = 0` 以及创建、修改审计字段，调用方已设置的值不被覆盖。
+- 创建人、修改人通过 `LoginContextManager.getRequired()` 取当前登录用户名；无登录上下文（定时任务、启动初始化等）时回退为 `system`，不阻断持久化。
+- 更新时只刷新 `modifyAt` 和 `modifyBy`，且强制覆盖实体上的旧值（MyBatis-Plus 3.5.x 的 `strictUpdateFill` 也是「为 null 才填充」，先查询再更新场景需用 `setFieldValByName` 强制刷新）。
 
-处理器作为 Spring 组件由 MyBatis-Plus 调用，只有实际执行对应 insert/update SQL 时才会触发填充。当前虽已有 `logincontext-contract` 与 runner 的 `LoginManager`，但尚未接入 `MetaObjectHandler`；不得把可获取登录上下文等同于审计字段已自动填充。
+处理器作为 Spring 组件由 MyBatis-Plus 调用，只有实际执行对应 insert/update SQL 时才会触发填充。生成或手写业务代码时不得重复声明这些公共字段，也不要在业务代码中手工设置审计字段；其他运行模块若独立部署，需复用该处理器或提供同等实现。
 
 ## 4. 逻辑删除与乐观锁
 

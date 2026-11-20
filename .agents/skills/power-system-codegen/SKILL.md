@@ -62,16 +62,17 @@ CurdController<DTO, ENTITY, CURD>           通用 CRUD 端点只有这一份
 
 ### 交互式（首选）
 
+Windows / DSH 使用 PowerShell 5.1+；首行仅放宽当前进程的执行策略，不修改系统设置，每个新的 DSH PowerShell 进程都需要执行：
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+& .agents/skills/power-system-codegen/scripts/generate.ps1
+```
+
 Bash / Git Bash：
 
 ```bash
 bash .agents/skills/power-system-codegen/scripts/generate.sh
-```
-
-PowerShell：
-
-```powershell
-& .agents/skills/power-system-codegen/scripts/generate.ps1
 ```
 
 菜单：
@@ -97,7 +98,7 @@ bash .agents/skills/power-system-codegen/scripts/generate.sh generate \
   --mode anemic
 ```
 
-生成 DDD 代码只需将最后一项改为 `--mode ddd`。PowerShell 使用 `$env:CODEGEN_DB_PASSWORD='实际密码'`，其余参数直接传给 `generate.ps1`。
+生成 DDD 代码只需将最后一项改为 `--mode ddd`。Windows / DSH 在当前 PowerShell 进程设置执行策略后，使用 `$env:CODEGEN_DB_PASSWORD='实际密码'`，将 `bash .../generate.sh` 替换为 `& .../generate.ps1`，其余参数保持不变。
 
 创建新业务模块后再生成：
 
