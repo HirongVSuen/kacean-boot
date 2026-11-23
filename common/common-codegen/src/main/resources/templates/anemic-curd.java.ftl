@@ -2,7 +2,7 @@ package ${infrastructurePackage}.curd;
 
 import ${infrastructurePackage}.dao.${businessName}Dao;
 import ${infrastructurePackage}.entity.${table.entityName};
-import com.kacean.power.common.infra.curd.BaseCurd;
+import com.kacean.boot.common.infra.curd.BaseCurd;
 import org.springframework.stereotype.Component;
 
 /**

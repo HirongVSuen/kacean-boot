@@ -1,11 +1,11 @@
 # share
 
-`share` 是 power-system 的**共享与契约聚合层**，只包含纯 Java jar 模块，统一解决两类跨边界复用：
+`share` 是 kacean-boot 的**共享与契约聚合层**，只包含纯 Java jar 模块，统一解决两类跨边界复用：
 
 | 子模块 | 职责 | 包名 | 稳定性 |
 | --- | --- | --- | --- |
-| `core` | 跨业务共享内核：稳定、无单一业务归属的领域类型（原 `core-share`） | `com.kacean.power.core.share` | 高，谨慎变更 |
-| `<子域>-contract` | 该子域对外契约：`XxxFacade` 接口、DTO（`XxxView`）、领域事件与按需定义的 Provider SPI | `com.kacean.power.<子域>.contract` | 归提供方子域所有，随子域演化 |
+| `core` | 跨业务共享内核：稳定、无单一业务归属的领域类型（原 `core-share`） | `com.kacean.boot.core.share` | 高，谨慎变更 |
+| `<子域>-contract` | 该子域对外契约：`XxxFacade` 接口、DTO（`XxxView`）、领域事件与按需定义的 Provider SPI | `com.kacean.boot.<子域>.contract` | 归提供方子域所有，随子域演化 |
 
 ## 核心原则：契约归提供方，core 保持纯净
 
@@ -31,7 +31,7 @@
 ## 新增子域契约模块
 
 1. 在 `share/` 下新建 `<子域>-contract/`（artifactId 与目录同名，parent 为 `share`），并注册到 `share/pom.xml` 的 `<modules>`。
-2. 在 `com.kacean.power.<子域>.contract` 包中定义 `XxxFacade`、`XxxView`、事件与按需定义的 Provider SPI，全部为中文 Javadoc 的纯 Java 类型。
+2. 在 `com.kacean.boot.<子域>.contract` 包中定义 `XxxFacade`、`XxxView`、事件与按需定义的 Provider SPI，全部为中文 Javadoc 的纯 Java 类型。
 3. 提供方 app 模块添加该 contract 依赖，在 `<子域>.app` 下实现 `XxxFacadeImpl`（`@Service`，构造器注入所需应用服务/仓储）。
 4. 消费方添加对方 contract 依赖并注入接口；执行 `mvn -pl business/deploy/ticket-deploy -am test` 验证架构规则。
 

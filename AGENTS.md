@@ -1,24 +1,24 @@
-# power-system 项目指引
+# kacean-boot 项目指引
 
 ## 加载与事实边界
 
 - 每次任务选择**一个主 Skill + 按需协作 Skill**，不预读全部 Skill、README 或 references。
 - `.agents/skills/<name>/SKILL.md` 由 DSH 发现并按任务加载；模块 README、references 与脚本只在主 Skill 或当前任务明确需要时读取。
-- 代码、根 `pom.xml` 与 `docs/domain/glossary.md` 是事实来源；文档与代码冲突时以代码为准，并通过 `power-system-skill-sync` 处理文档漂移。
+- 代码、根 `pom.xml` 与 `docs/domain/glossary.md` 是事实来源；文档与代码冲突时以代码为准，并通过 `kacean-boot-skill-sync` 处理文档漂移。
 - 未读取并核实源码前，不假设某个类、方法、配置或模块存在。
 
 ## 任务路由
 
 | 任务 | 主 Skill | 按需协作 Skill |
 | --- | --- | --- |
-| 业务代码、CRUD、仓储、业务审查 | `power-system-business` | app、share、naming、javadoc |
-| 应用服务、复杂用例、领域对象 | `power-system-app` | business、share |
-| 跨子域契约与共享类型 | `power-system-share` | app、build |
-| 数据库表代码生成、业务模块脚手架 | `power-system-codegen` | business、naming |
-| 构建、依赖、分发、启动与运行资源 | `power-system-build` | skill-sync |
-| 包、类、方法命名与命名审查 | `power-system-naming` | business、javadoc |
-| Java 注释与 Javadoc | `power-system-javadoc` | naming |
-| Skill 过期、公共架构变化与规范同步 | `power-system-skill-sync` | 受影响的 Skill |
+| 业务代码、CRUD、仓储、业务审查 | `kacean-boot-business` | app、share、naming、javadoc |
+| 应用服务、复杂用例、领域对象 | `kacean-boot-app` | business、share |
+| 跨子域契约与共享类型 | `kacean-boot-share` | app、build |
+| 数据库表代码生成、业务模块脚手架 | `kacean-boot-codegen` | business、naming |
+| 构建、依赖、分发、启动与运行资源 | `kacean-boot-build` | skill-sync |
+| 包、类、方法命名与命名审查 | `kacean-boot-naming` | business、javadoc |
+| Java 注释与 Javadoc | `kacean-boot-javadoc` | naming |
+| Skill 过期、公共架构变化与规范同步 | `kacean-boot-skill-sync` | 受影响的 Skill |
 
 ## 默认工作闭环
 

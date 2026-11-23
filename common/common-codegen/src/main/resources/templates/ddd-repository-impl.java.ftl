@@ -4,7 +4,7 @@ import ${appPackage}.domain.${businessName};
 import ${appPackage}.repo.${businessName}Repository;
 import ${infrastructurePackage}.dao.${businessName}Dao;
 import ${infrastructurePackage}.entity.${table.entityName};
-import com.kacean.power.common.infra.repo.BaseRepositoryImpl;
+import com.kacean.boot.common.infra.repo.BaseRepositoryImpl;
 import org.springframework.stereotype.Repository;
 
 /**

@@ -1,13 +1,13 @@
-# power-system
+# kacean-boot
 
-`power-system` 是一个基于 Java 21 的 Maven 多模块单体后端工程。项目通过 `runner`、`common`、`business`、`share` 四个顶层模块组织代码，业务模块按 `app / port` 组织：`app` 是独立应用模块，只使用 Spring DI 与通用应用层基类，不绑定持久化技术；`port` 同时承载 `web`（Spring MVC）与 `infra`（持久化和外部系统适配）两个包，并使用独立的 `deploy` 模块组合部署依赖。**DDD 前期贫血模式下 `web` 可直接调用 `infra`**，简单 CRUD 不绕道 `app`；业务复杂度上升后才由 `app` 的应用服务承载用例编排。
+`kacean-boot` 是一个基于 Java 21 的 Maven 多模块单体后端工程。项目通过 `runner`、`common`、`business`、`share` 四个顶层模块组织代码，业务模块按 `app / port` 组织：`app` 是独立应用模块，只使用 Spring DI 与通用应用层基类，不绑定持久化技术；`port` 同时承载 `web`（Spring MVC）与 `infra`（持久化和外部系统适配）两个包，并使用独立的 `deploy` 模块组合部署依赖。**DDD 前期贫血模式下 `web` 可直接调用 `infra`**，简单 CRUD 不绕道 `app`；业务复杂度上升后才由 `app` 的应用服务承载用例编排。
 
 工程采用 **thin jar + 外置 runtime 依赖** 的分发方式，最终生成包含应用、依赖、配置、静态资源和启停脚本的 ZIP 分发包。
 
 ## 文档
 
 - [领域术语表](docs/domain/glossary.md)：业务术语、代码命名与禁用叫法的唯一来源，涉及业务命名或领域建模前先阅读。
-- [业务代码生成](.agents/skills/power-system-codegen/SKILL.md)：开发期业务模块脚手架，以及按子域生成贫血或 DDD 模式的 Entity、Mapper、XML、DAO/CURD、Web 与领域/仓储代码。
+- [业务代码生成](.agents/skills/kacean-boot-codegen/SKILL.md)：开发期业务模块脚手架，以及按子域生成贫血或 DDD 模式的 Entity、Mapper、XML、DAO/CURD、Web 与领域/仓储代码。
 - [持久化公共字段 DDL](common/common-infra/README.md)：`BaseEntity` 主键策略、公共列类型与 MySQL 示例表结构。
 - [统一响应体](common/common-web/README.md)：`Result` 响应码、字段错误与序列化边界。
 
@@ -20,7 +20,7 @@
 | 接口文档 | springdoc-openapi 3.2.0，由 `standalone-runner` 提供 Swagger UI 与 OpenAPI JSON |
 | MyBatis-Plus | 3.5.18，通过 `mybatis-plus-bom` 统一管理版本；`standalone-runner` 引入 Boot 4 Starter 与 MySQL 运行时驱动，`common-codegen` 仅含开发期生成器与元数据驱动 |
 | 持久化 | runner 已提供 MySQL 基础设施，业务持久化适配由对应 `port` 实现，不使用 JPA |
-| 项目坐标 | `com.kacean.power:power-system:1.0-SNAPSHOT` |
+| 项目坐标 | `com.kacean.boot:kacean-boot:1.0-SNAPSHOT` |
 | 构建工具 | Maven 多模块 |
 | 分发打包 | `maven-assembly-plugin` 3.8.0 |
 | 架构测试 | ArchUnit 1.3.0 + JUnit 5 |
@@ -30,7 +30,7 @@
 ## 项目结构
 
 ```text
-power-system/
+kacean-boot/
 ├── pom.xml                              根 POM：聚合顶层模块、管理统一版本与插件
 ├── runner/                              启动器聚合层，不包含业务代码
 │   └── standalone-runner/               单体启动入口、运行资源与分发打包
@@ -65,7 +65,7 @@ power-system/
 
 `share` 是共享与契约聚合层：`share/core` 只放稳定、无单一业务归属的跨业务共享领域类型（原 `core-share`）；`share/<子域>-contract` 放对应子域的对外契约（`XxxFacade` 接口、DTO、领域事件与按需定义的 Provider SPI），由提供方子域在 app 层实现、消费方按需显式依赖。两者均为纯 Java jar，不依赖业务实现或框架，未被依赖时不会进入分发包。详细边界见 [`share/README.md`](share/README.md)。
 
-领域模型为纯 Java 对象，不使用 JPA 等持久化框架注解。持久化适配由 `port` 或部署侧按需配置。ticket 子域（`tickettype`）当前已有票种类型贫血 CRUD 的 Web 与持久化代码，尚无 app 领域对象、仓储或应用服务实现；登录上下文契约独立为 `share/logincontext-contract`（`com.kacean.power.logincontext.contract`，含 `LoginContext`、`LoginContextManager` 与 `LoginContextProvider`）；`LoginManager` 位于 standalone-runner，作为运行时编排组件创建同一上下文实例，编排 Spring Bean 或 Java SPI Provider 完成填充。loginaccount 子域承载登录账号贫血 CRUD，并提供该 SPI 的 `LoginAccountContextProvider` 实现：开发期通过请求头 `X-Login-Account` 模拟登录，查询启用账号填充上下文，尚未接入认证设施。
+领域模型为纯 Java 对象，不使用 JPA 等持久化框架注解。持久化适配由 `port` 或部署侧按需配置。ticket 子域（`tickettype`）当前已有票种类型贫血 CRUD 的 Web 与持久化代码，尚无 app 领域对象、仓储或应用服务实现；登录上下文契约独立为 `share/logincontext-contract`（`com.kacean.boot.logincontext.contract`，含 `LoginContext`、`LoginContextManager` 与 `LoginContextProvider`）；`LoginManager` 位于 standalone-runner，作为运行时编排组件创建同一上下文实例，编排 Spring Bean 或 Java SPI Provider 完成填充。loginaccount 子域承载登录账号贫血 CRUD，并提供该 SPI 的 `LoginAccountContextProvider` 实现：开发期通过请求头 `X-Login-Account` 模拟登录，查询启用账号填充上下文，尚未接入认证设施。
 
 ### 依赖方向
 
@@ -81,7 +81,7 @@ standalone-runner
 必须遵守以下约束：
 
 - 同业务依赖方向为 `port → app`；**port 模块内 `web` 可直接调用 `infra`**（贫血阶段简单 CRUD 不强制经过 app），`infra` 不得反向依赖 `web`，`app` 不依赖 `port`。业务模块可按需依赖 `share/core` 与所需的 `share/<子域>-contract`，`share` 下模块不反向依赖任何业务或公共技术模块。
-- 业务代码按 `com.kacean.power.<子域>.app` 与 `com.kacean.power.<子域>.port.<web|infra>` 组织（如 `tickettype/app`、`tickettype/port/web`、`tickettype/port/infra`），子域名全局唯一且 app 与 port 包一致；层根包下不得直接建类，需再按 `controller/service/domain` 等技术分包细分；不同子域的实现包之间不能调用（同层、跨层均禁止）。该约束由 `common-test` 的 ArchUnit 规则强制。
+- 业务代码按 `com.kacean.boot.<子域>.app` 与 `com.kacean.boot.<子域>.port.<web|infra>` 组织（如 `tickettype/app`、`tickettype/port/web`、`tickettype/port/infra`），子域名全局唯一且 app 与 port 包一致；层根包下不得直接建类，需再按 `controller/service/domain` 等技术分包细分；不同子域的实现包之间不能调用（同层、跨层均禁止）。该约束由 `common-test` 的 ArchUnit 规则强制。
 - 子域间同步调用经由 `share/<子域>-contract` 模块的 `<子域>.contract` 契约包：契约以 `XxxFacade` 接口命名（DTO、领域事件同包），提供方在 `app` 层对应子域以 `XxxFacadeImpl` 实现，消费方只注入契约接口；契约包不得依赖任何 `app/port` 实现。`share/core` 只放跨业务共享领域类型，不承担子域契约。
 - `standalone-runner` 只依赖部署子模块，不承载业务代码。
 - `web` 只使用 Spring MVC；`common-web` 不依赖 Boot Starter、Tomcat 或 Jackson。Swagger 只引入 `swagger-annotations-jakarta` 注解包，文档运行时由 `standalone-runner` 的 `springdoc-openapi-starter-webmvc-ui` 提供，启动后访问 `/swagger-ui/index.html`（OpenAPI JSON 为 `/v3/api-docs`）。`app` 只使用 Spring DI 相关类型与通用应用层基类；具体 Web、数据访问和外部客户端实现不放入 `app`。
@@ -92,15 +92,15 @@ standalone-runner
 
 ### 代码归属
 
-启动主类为 `com.kacean.power.PowerSystemApplication`，默认扫描 `com.kacean.power` 及其子包。业务代码建议按以下包结构组织：
+启动主类为 `com.kacean.boot.KaceanBootApplication`，默认扫描 `com.kacean.boot` 及其子包。业务代码建议按以下包结构组织：
 
 | 代码类型 | 模块 | 建议包名 |
 | --- | --- | --- |
-| Spring MVC Controller、DTO、assembler、MVC 配置 | `<域>-port` | `com.kacean.power.<子域>.port.web.{controller,dto,assembler,config}` |
-| 应用服务、command/query、领域模型（纯 Java）、仓储接口 | `<域>-app` | `com.kacean.power.<子域>.app.{service,domain,repository}` |
-| 子域间调用契约（Facade 接口、DTO、领域事件） | `share/<子域>-contract` | `com.kacean.power.<子域>.contract` |
-| 跨业务稳定共享领域类型 | `share/core` | `com.kacean.power.core.share` |
-| 仓储实现、外部客户端、持久化适配 | `<域>-port` | `com.kacean.power.<子域>.port.infra.{entity,mapper,dao,repo,convert,query,client,config}` |
+| Spring MVC Controller、DTO、assembler、MVC 配置 | `<域>-port` | `com.kacean.boot.<子域>.port.web.{controller,dto,assembler,config}` |
+| 应用服务、command/query、领域模型（纯 Java）、仓储接口 | `<域>-app` | `com.kacean.boot.<子域>.app.{service,domain,repository}` |
+| 子域间调用契约（Facade 接口、DTO、领域事件） | `share/<子域>-contract` | `com.kacean.boot.<子域>.contract` |
+| 跨业务稳定共享领域类型 | `share/core` | `com.kacean.boot.core.share` |
+| 仓储实现、外部客户端、持久化适配 | `<域>-port` | `com.kacean.boot.<子域>.port.infra.{entity,mapper,dao,repo,convert,query,client,config}` |
 
 其中 `<子域>` 为业务子域名，全小写且全局唯一（如 `tickettype`），同一子域在 `app` 与 `port` 中使用相同的分包名；Maven 业务模块仍按业务域聚合（`ticket-app/port`），包名不再包含业务域层级。跨子域调用示例：`ticketorder` 需要工单类型数据时，依赖 `share/tickettype-contract` 并注入 `tickettype.contract.TicketTypeFacade`，由 `tickettype/app` 的 `TicketTypeFacadeImpl` 提供实现，不直接 import `tickettype` 子域任何实现类。
 
@@ -139,7 +139,7 @@ public class TicketApplicationService {
 
 ```xml
 <dependency>
-    <groupId>com.kacean.power</groupId>
+    <groupId>com.kacean.boot</groupId>
     <artifactId>common-util</artifactId>
     <version>${project.version}</version>
 </dependency>
@@ -183,7 +183,7 @@ runner/standalone-runner/target/standalone-runner-1.0-SNAPSHOT/
 可以直接在 IDE 中运行：
 
 ```text
-runner/standalone-runner/src/main/java/com/kacean/power/PowerSystemApplication.java
+runner/standalone-runner/src/main/java/com/kacean/boot/KaceanBootApplication.java
 ```
 
 启动后访问：
@@ -239,7 +239,7 @@ standalone-runner-1.0-SNAPSHOT/
 └── run/                         运行期自动创建，保存 PID 文件
 ```
 
-启动脚本通过 `java -cp "lib/*" com.kacean.power.PowerSystemApplication` 加载应用及依赖，并通过 `--spring.config.additional-location` 和 `--logging.config` 加载外置配置。
+启动脚本通过 `java -cp "lib/*" com.kacean.boot.KaceanBootApplication` 加载应用及依赖，并通过 `--spring.config.additional-location` 和 `--logging.config` 加载外置配置。
 
 ## 配置与静态资源
 
@@ -267,7 +267,7 @@ conf/logback-spring.xml
 
 ### 持久化
 
-`standalone-runner` 已引入 MyBatis-Plus Boot 4 Starter 和 MySQL 运行时驱动，数据源默认连接 `localhost:3306/power_system`，可通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 环境变量覆盖；真实密码不得写入配置仓库。`application.yml` 同时配置 Mapper XML 扫描、下划线转驼峰、`ASSIGN_ID` 主键策略和数值逻辑删除值；当前 runner 未配置 `MetaObjectHandler` 公共字段填充处理器，也不存在 `OperatorContext`，`common-infra` `BaseEntity` 中声明 `FieldFill` 的外部编号与审计字段需后续补充填充处理器才会自动赋值。业务持久化应在对应 `port` 新增 Entity、Mapper 与仓储适配，不改变 `app` 层仓储契约，也不使用 JPA。
+`standalone-runner` 已引入 MyBatis-Plus Boot 4 Starter 和 MySQL 运行时驱动，数据源默认连接 `localhost:3306/kacean_boot`，可通过 `DB_URL`、`DB_USERNAME`、`DB_PASSWORD` 环境变量覆盖；真实密码不得写入配置仓库。`application.yml` 同时配置 Mapper XML 扫描、下划线转驼峰、`ASSIGN_ID` 主键策略和数值逻辑删除值；当前 runner 未配置 `MetaObjectHandler` 公共字段填充处理器，也不存在 `OperatorContext`，`common-infra` `BaseEntity` 中声明 `FieldFill` 的外部编号与审计字段需后续补充填充处理器才会自动赋值。业务持久化应在对应 `port` 新增 Entity、Mapper 与仓储适配，不改变 `app` 层仓储契约，也不使用 JPA。
 
 ### 静态资源
 
@@ -284,7 +284,7 @@ spring:
 
 ## 日志
 
-- 应用同时输出到控制台和 `.logs/power-system.log`。
+- 应用同时输出到控制台和 `.logs/kacean-boot.log`。
 - 文件按天滚动，单文件达到 50 MB 后切分。
 - Logback 不自动删除历史日志。
 - `archive-logs` 脚本将 30 天前的历史日志压缩到 `.logs/archive/`：sh 使用 gzip，bat 使用 ZIP。
@@ -321,16 +321,16 @@ mvn test -pl business/deploy/ticket-deploy,business/deploy/system-deploy -am
 在项目根目录执行：
 
 ```bash
-sh .agents/skills/power-system-build/scripts/verify.sh
+sh .agents/skills/kacean-boot-build/scripts/verify.sh
 ```
 
 脚本会自动完成：
 
 1. 执行 `mvn clean package`。
 2. 解压 ZIP 并启动应用。
-3. 断言启动日志包含 `Started PowerSystemApplication`。
+3. 断言启动日志包含 `Started KaceanBootApplication`。
 4. 断言 `/`、`/index.html`、Swagger UI 与 OpenAPI JSON 均返回 HTTP 200。
-5. 检查 `.logs/power-system.log`，随后停止应用并清理 `target/dist-verify`。
+5. 检查 `.logs/kacean-boot.log`，随后停止应用并清理 `target/dist-verify`。
 
 默认使用 8080 端口。无论验证成功或失败，脚本都会清理本次启动的应用和临时目录。
 

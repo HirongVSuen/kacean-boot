@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.kacean.power</groupId>
+        <groupId>com.kacean.boot</groupId>
         <artifactId>common</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
@@ -46,19 +46,19 @@
         </dependency>
         <!-- 生成源码编译测试需要真实的公共基类与 Spring Web 类型，不进入生成器运行时。 -->
         <dependency>
-            <groupId>com.kacean.power</groupId>
+            <groupId>com.kacean.boot</groupId>
             <artifactId>common-app</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.kacean.power</groupId>
+            <groupId>com.kacean.boot</groupId>
             <artifactId>common-web</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.kacean.power</groupId>
+            <groupId>com.kacean.boot</groupId>
             <artifactId>common-infra</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -81,7 +81,7 @@
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.kacean.power.codegen.CodeGeneratorApplication</mainClass>
+                    <mainClass>com.kacean.boot.codegen.CodeGeneratorApplication</mainClass>
                 </configuration>
             </plugin>
         </plugins>

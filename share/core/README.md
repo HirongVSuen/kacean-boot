@@ -1,6 +1,6 @@
 # core（share/core）
 
-`core` 是 power-system 的**跨业务共享内核**（原 `core-share`），用于沉淀稳定、无单一业务归属的领域类型。
+`core` 是 kacean-boot 的**跨业务共享内核**（原 `core-share`），用于沉淀稳定、无单一业务归属的领域类型。
 
 它是 `share` 聚合下的普通 Java jar 模块，不是公共工具包，也不承担跨业务服务调用。当前提供设备引用、人员引用与场站信息，只有被其他模块显式依赖后才会进入应用分发包。**各子域的对外调用契约（Facade/DTO/事件）不放在这里，而是放在 `share/<子域>-contract` 模块。**
 
@@ -29,7 +29,7 @@
 
 ```xml
 <dependency>
-    <groupId>com.kacean.power</groupId>
+    <groupId>com.kacean.boot</groupId>
     <artifactId>core</artifactId>
     <version>${project.version}</version>
 </dependency>
@@ -42,7 +42,7 @@
 根包固定为：
 
 ```text
-com.kacean.power.core.share
+com.kacean.boot.core.share
 ```
 
 类型较少时保持简单结构；出现多个清晰的共享主题后，再按领域主题划分子包，不预先建立复杂的 `model/service/util` 技术分层。
@@ -116,10 +116,10 @@ Site(SiteType siteType, String name, String internalCode)
 mvn test -pl share/core
 
 # 示例：检查 ticket-app 对 share/core 的实际依赖
-mvn -pl business/ticket/ticket-app -am compile dependency:tree -Dincludes=com.kacean.power:core
+mvn -pl business/ticket/ticket-app -am compile dependency:tree -Dincludes=com.kacean.boot:core
 
 # 依赖或结构变更后的完整验证；8080 被占用时可指定其他端口
-sh .agents/skills/power-system-build/scripts/verify.sh 18080
+sh .agents/skills/kacean-boot-build/scripts/verify.sh 18080
 ```
 
 ## 放置前检查

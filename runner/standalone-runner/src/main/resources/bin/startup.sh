@@ -23,7 +23,7 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 # 3. thin jar + lib 外置依赖：通过 classpath 通配符加载全部依赖与主类
-MAIN_CLASS=com.kacean.power.PowerSystemApplication
+MAIN_CLASS=com.kacean.boot.KaceanBootApplication
 CLASS_PATH="$APP_HOME/lib/*"
 CONFIG_LOCATION="file:$APP_HOME/conf/"
 # 外置日志配置：命令行指定，优先于 application.yml 中的 classpath 默认值

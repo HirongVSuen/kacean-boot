@@ -1,7 +1,7 @@
 package ${appPackage}.repo;
 
 import ${appPackage}.domain.${businessName};
-import com.kacean.power.common.app.repo.BaseRepository;
+import com.kacean.boot.common.app.repo.BaseRepository;
 
 /**
  * ${table.comment!"业务数据"}仓储契约。

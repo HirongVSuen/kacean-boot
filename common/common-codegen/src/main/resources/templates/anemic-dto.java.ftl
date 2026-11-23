@@ -1,6 +1,6 @@
 package ${webPackage}.dto;
 
-import com.kacean.power.common.web.response.BaseDTO;
+import com.kacean.boot.common.web.response.BaseDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 <#if dtoJsonFormatRequired>
 import com.fasterxml.jackson.annotation.JsonFormat;

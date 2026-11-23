@@ -1,6 +1,6 @@
 # common-infra 持久化公共字段规范
 
-`com.kacean.power.common.infra.entity.BaseEntity` 是 MyBatis-Plus 持久化对象的公共基类。业务 Entity 继承该基类后，不得重复声明下列公共字段。
+`com.kacean.boot.common.infra.entity.BaseEntity` 是 MyBatis-Plus 持久化对象的公共基类。业务 Entity 继承该基类后，不得重复声明下列公共字段。
 
 ## 通用持久化与仓储基类
 

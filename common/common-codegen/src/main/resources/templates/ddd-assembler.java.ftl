@@ -3,7 +3,7 @@ package ${webPackage}.assembler;
 import ${appPackage}.domain.${businessName};
 import ${infrastructurePackage}.entity.${table.entityName};
 import ${webPackage}.dto.${businessName}DTO;
-import com.kacean.power.common.web.assembler.DddAssembler;
+import com.kacean.boot.common.web.assembler.DddAssembler;
 import org.mapstruct.Mapper;
 
 /**

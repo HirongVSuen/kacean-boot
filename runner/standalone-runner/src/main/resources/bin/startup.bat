@@ -10,7 +10,7 @@ set PID_FILE=%APP_HOME%\run\%APP_NAME%.pid
 set LOG_DIR=%APP_HOME%\.logs
 set LOG_FILE=%LOG_DIR%\%APP_NAME%.log
 set ERR_FILE=%LOG_DIR%\%APP_NAME%-error.log
-set MAIN_CLASS=com.kacean.power.PowerSystemApplication
+set MAIN_CLASS=com.kacean.boot.KaceanBootApplication
 
 rem 1. Check the executable jar under lib directory
 if not exist "%JAR_FILE%" (

@@ -4,7 +4,7 @@ import ${appPackage}.domain.${businessName};
 import ${infrastructurePackage}.curd.${businessName}Curd;
 import ${infrastructurePackage}.entity.${table.entityName};
 import ${webPackage}.dto.${businessName}DTO;
-import com.kacean.power.common.web.controller.DddController;
+import com.kacean.boot.common.web.controller.DddController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 

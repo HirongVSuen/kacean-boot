@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>com.kacean.power</groupId>
+        <groupId>com.kacean.boot</groupId>
         <artifactId>runner</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
@@ -21,7 +21,7 @@
     <dependencies>
         <!-- 业务模块统一经 business/deploy/ticket-deploy 部署子模块引入 -->
         <dependency>
-            <groupId>com.kacean.power</groupId>
+            <groupId>com.kacean.boot</groupId>
             <artifactId>ticket-deploy</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -48,13 +48,13 @@
         </dependency>
         <!-- 系统业务通过部署模块进入单体运行时 -->
         <dependency>
-            <groupId>com.kacean.power</groupId>
+            <groupId>com.kacean.boot</groupId>
             <artifactId>system-deploy</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- 登录管理器作为运行时编排组件实现登录上下文契约，显式声明直接依赖 -->
         <dependency>
-            <groupId>com.kacean.power</groupId>
+            <groupId>com.kacean.boot</groupId>
             <artifactId>logincontext-contract</artifactId>
             <version>${project.version}</version>
         </dependency>

@@ -2,7 +2,7 @@ package ${infrastructurePackage}.convert;
 
 import ${appPackage}.domain.${businessName};
 import ${infrastructurePackage}.entity.${table.entityName};
-import com.kacean.power.common.infra.repo.BaseConvert;
+import com.kacean.boot.common.infra.repo.BaseConvert;
 import org.mapstruct.Mapper;
 
 /**

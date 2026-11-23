@@ -10,10 +10,10 @@
     <springProperty scope="context" name="LOG_PATH" source="logging.file.path" defaultValue=".logs"/>
 
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_PATH}/power-system.log</file>
+        <file>${LOG_PATH}/kacean-boot.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- 按天输出，单文件超 50MB 再切分；当月（30 天内）保留原始 .log 不压缩 -->
-            <fileNamePattern>${LOG_PATH}/power-system.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOG_PATH}/kacean-boot.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>50MB</maxFileSize>
             <!-- 不设 maxHistory：过月日志由 bin/archive-logs 脚本压缩归档到 .logs/archive，留存不删除 -->
         </rollingPolicy>

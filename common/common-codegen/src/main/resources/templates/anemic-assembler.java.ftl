@@ -2,7 +2,7 @@ package ${webPackage}.assembler;
 
 import ${infrastructurePackage}.entity.${table.entityName};
 import ${webPackage}.dto.${businessName}DTO;
-import com.kacean.power.common.web.assembler.CurdAssembler;
+import com.kacean.boot.common.web.assembler.CurdAssembler;
 import org.mapstruct.Mapper;
 
 /**

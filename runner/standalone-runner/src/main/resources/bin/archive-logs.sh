@@ -10,8 +10,8 @@ RETENTION_DAYS=30
 [ -d "$LOG_DIR" ] || exit 0
 mkdir -p "$ARCHIVE_DIR"
 
-# 压缩 30 天前的历史日志（不含当前写入中的 power-system.log），压缩后删除原文件
-find "$LOG_DIR" -maxdepth 1 -type f -name "power-system.*.log" -mtime +$RETENTION_DAYS | while read -r file; do
+# 压缩 30 天前的历史日志（不含当前写入中的 kacean-boot.log），压缩后删除原文件
+find "$LOG_DIR" -maxdepth 1 -type f -name "kacean-boot.*.log" -mtime +$RETENTION_DAYS | while read -r file; do
     base=$(basename "$file")
     if gzip -c "$file" > "$ARCHIVE_DIR/$base.gz"; then
         rm -f "$file"

@@ -2,7 +2,7 @@ package ${infrastructurePackage}.dao;
 
 import ${infrastructurePackage}.entity.${table.entityName};
 import ${infrastructurePackage}.mapper.${table.mapperName};
-import com.kacean.power.common.infra.dao.BaseDaoImpl;
+import com.kacean.boot.common.infra.dao.BaseDaoImpl;
 import org.springframework.stereotype.Repository;
 
 /**

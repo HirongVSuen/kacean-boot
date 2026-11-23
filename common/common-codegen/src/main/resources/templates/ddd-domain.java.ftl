@@ -1,6 +1,6 @@
 package ${appPackage}.domain;
 
-import com.kacean.power.common.app.domain.BaseDomain;
+import com.kacean.boot.common.app.domain.BaseDomain;
 import lombok.Getter;
 import lombok.Setter;
 <#list modelImportPackages as packageName>

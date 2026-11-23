@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.kacean.power.tickettype.port.infra.mapper.TicketTypeMapper">
+<mapper namespace="com.kacean.boot.tickettype.port.infra.mapper.TicketTypeMapper">
 
     <!-- 通用查询映射结果 -->
-    <resultMap id="BaseResultMap" type="com.kacean.power.tickettype.port.infra.entity.TicketTypeEntity">
+    <resultMap id="BaseResultMap" type="com.kacean.boot.tickettype.port.infra.entity.TicketTypeEntity">
         <id column="id" property="id" />
         <result column="external_no" property="externalNo" />
         <result column="deleted" property="deleted" />
