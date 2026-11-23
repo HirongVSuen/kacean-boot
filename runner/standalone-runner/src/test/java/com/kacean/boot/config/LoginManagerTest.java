@@ -1,6 +1,7 @@
-package com.kacean.boot.runner.logincontext;
+package com.kacean.boot.config;
 
 import com.kacean.boot.logincontext.contract.LoginContext;
+import com.kacean.boot.logincontext.contract.LoginContextManager;
 import com.kacean.boot.logincontext.contract.LoginContextProvider;
 import com.kacean.boot.logincontext.contract.LoginContextUnavailableException;
 import org.junit.jupiter.api.Test;
@@ -87,6 +88,33 @@ class LoginManagerTest {
 
             LoginManager manager = context.getBean(LoginManager.class);
             assertThrows(LoginContextUnavailableException.class, manager::getRequired);
+        }
+    }
+
+    @Test
+    void 提供者反向依赖登录管理器时_延迟解析避免循环装配() {
+        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+            context.register(LoginManager.class, ManagerDependentProvider.class);
+            context.refresh();
+
+            LoginContext actual = context.getBean(LoginManager.class).getRequired();
+
+            assertAll(
+                    () -> assertEquals("manager-user", actual.getUserId()),
+                    () -> assertEquals("manager-operator", actual.getUsername()));
+        }
+    }
+
+    /** 反向依赖登录管理器的测试提供者，用于验证 Spring 装配阶段不会提前解析提供者。 */
+    public static class ManagerDependentProvider implements LoginContextProvider {
+
+        public ManagerDependentProvider(LoginContextManager loginContextManager) {
+        }
+
+        @Override
+        public void fill(LoginContext context) {
+            context.setUserId("manager-user");
+            context.setUsername("manager-operator");
         }
     }
 

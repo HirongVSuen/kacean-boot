@@ -23,8 +23,8 @@
 
 - `CurdAssembler<DTO, ENTITY>` 定义 DTO ↔ Entity 的单值、集合与 `PageResult` 双向转换，适用于贫血模式。
 - `DddAssembler<DTO, DOMAIN, ENTITY> extends CurdAssembler<DTO, ENTITY>`，增加 DTO ↔ DOMAIN 转换；具体业务接口使用 `@Mapper(componentModel = "spring")`。
-- `CurdController<DTO, ENTITY, CURD>` 通过 `@Autowired` 字段注入 `CurdAssembler` 与 `BaseCurd`（按子类泛型解析，子类无需构造器），统一承载通用 CRUD 端点。
-- `DddController<DTO, DOMAIN, ENTITY, CURD> extends CurdController<DTO, ENTITY, CURD>`，通过 `@Autowired` 字段注入 `DddAssembler`，业务 CURD 由父类字段注入，通过协变 `assembler()` 暴露领域转换能力。它只增加 `DOMAIN` 泛型和转换入口，不复制通用端点。
+- `CurdController<DTO, ENTITY, CURD>` 通过 `@Autowired` 字段注入 `CurdAssembler` 与 `BaseCurd`（按子类泛型解析，子类无需构造器），统一承载通用 CRUD 端点；所有端点返回 `Result<T>`，原业务结果通过 `Result.success(data)` 放入 `data`。
+- `DddController<DTO, DOMAIN, ENTITY, CURD> extends CurdController<DTO, ENTITY, CURD>`，通过 `@Autowired` 字段注入 `DddAssembler`，业务 CURD 由父类字段注入，通过协变 `assembler()` 暴露领域转换能力。它只增加 `DOMAIN` 泛型和转换入口，不复制通用端点，并继承父类统一的 `Result<T>` 响应契约。
 
 贫血控制器直接继承 `CurdController`，DDD 控制器直接继承 `DddController`。业务子类只声明特有端点，不重复实现父类已有 CRUD 映射，也不另建 `BaseController` / `SimpleController` 等平行继承层。DDD 父类继承的通用端点仍走 `BaseCurd` 与 Entity；需要领域用例时，由业务控制器新增端点并调用 app 服务。
 

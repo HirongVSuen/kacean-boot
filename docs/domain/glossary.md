@@ -18,11 +18,13 @@
 
 | 术语 | 代码命名 | 类型 | 定义 | 同义词 / 禁用叫法 | 代码位置 |
 | --- | --- | --- | --- | --- | --- |
-| 系统 | `system` | 业务域 | 系统相关业务边界，当前包含 system、loginaccount 子域及 app、port 与 deploy 模块 | — | `business/system/pom.xml` |
+| 系统 | `system` | 业务域 | 系统相关业务边界，当前包含 system、loginaccount、datadict 子域及 app、port 与 deploy 模块 | — | `business/system/pom.xml` |
 | 登录上下文 | `LoginContext` | 契约响应对象 | 当前登录用户的统一可变响应对象，包含用户标识与用户名，由 Provider 逐次填充 | — | `share/logincontext-contract/src/main/java/com/kacean/boot/logincontext/contract/LoginContext.java` |
 | 登录上下文管理契约 | `LoginContextManager` | 对外契约 | 创建统一登录上下文并由所有 Provider 填充，填充不完整时抛出 `LoginContextUnavailableException` | — | `share/logincontext-contract/src/main/java/com/kacean/boot/logincontext/contract/LoginContextManager.java` |
 | 登录上下文提供者 | `LoginContextProvider` | SPI | 将具体认证或执行环境中的身份信息填充到统一 `LoginContext` | — | `share/logincontext-contract/src/main/java/com/kacean/boot/logincontext/contract/LoginContextProvider.java` |
-| 登录管理器 | `LoginManager` | 运行时组件 | 创建同一 `LoginContext`，按顺序调用所有 Provider 填充后返回；位于 standalone-runner，作为运行时编排组件而非业务应用服务 | — | `runner/standalone-runner/src/main/java/com/kacean/boot/runner/logincontext/LoginManager.java` |
+| 登录管理器 | `LoginManager` | 运行时组件 | 创建同一 `LoginContext`，按顺序调用所有 Provider 填充后返回；位于 standalone-runner，作为运行时编排组件而非业务应用服务 | — | `runner/standalone-runner/src/main/java/com/kacean/boot/config/LoginManager.java` |
 | 登录上下文不可用异常 | `LoginContextUnavailableException` | 业务异常 | Provider 完成填充后仍缺少当前登录用户的必需身份信息时抛出 | — | `share/logincontext-contract/src/main/java/com/kacean/boot/logincontext/contract/LoginContextUnavailableException.java` |
 | 登录账号 | `LoginAccount` | 实体（贫血） | 系统登录账号，包含登录账号、登录密码哈希与账号状态（0-禁用，1-启用） | 登录账户 | `business/system/system-port/src/main/java/com/kacean/boot/loginaccount/port/infra/entity/LoginAccountEntity.java` |
 | 登录账号上下文提供者 | `LoginAccountContextProvider` | SPI 实现 | loginaccount 子域的登录上下文提供者：开发期从请求头 `X-Login-Account` 读取登录账号并查询启用账号，填充用户标识与登录名；未接入认证设施，未命中时不填充 | — | `business/system/system-port/src/main/java/com/kacean/boot/loginaccount/port/web/provider/LoginAccountContextProvider.java` |
+| 数据字典 | `DataDict` | 实体（贫血） | 数据字典主记录，包含字典名与启用状态（0-禁用，1-启用） | — | `business/system/system-port/src/main/java/com/kacean/boot/datadict/port/infra/entity/DataDictEntity.java` |
+| 数据字典值 | `DataDictValue` | 实体（贫血） | 数据字典值记录，通过数据字典主表 ID 关联所属字典，包含字典编码与字典中文值 | — | `business/system/system-port/src/main/java/com/kacean/boot/datadict/port/infra/entity/DataDictValueEntity.java` |

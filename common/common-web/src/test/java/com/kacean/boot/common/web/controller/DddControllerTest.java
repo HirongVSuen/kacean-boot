@@ -2,6 +2,7 @@ package com.kacean.boot.common.web.controller;
 
 import com.kacean.boot.common.web.assembler.CurdAssembler;
 import com.kacean.boot.common.web.assembler.DddAssembler;
+import com.kacean.boot.common.web.response.Result;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,6 +40,20 @@ class DddControllerTest {
                 .anyMatch(DddControllerTest::hasMapping));
         assertFalse(Arrays.stream(DddController.class.getDeclaredMethods())
                 .anyMatch(DddControllerTest::hasMapping));
+    }
+
+    @Test
+    void CURD与DDD通用端点统一返回Result() throws NoSuchMethodException {
+        List<Method> endpoints = Arrays.stream(CurdController.class.getDeclaredMethods())
+                .filter(DddControllerTest::hasMapping)
+                .toList();
+
+        assertFalse(endpoints.isEmpty());
+        for (Method endpoint : endpoints) {
+            assertEquals(Result.class, endpoint.getReturnType(), endpoint::toGenericString);
+            Method dddEndpoint = DddController.class.getMethod(endpoint.getName(), endpoint.getParameterTypes());
+            assertEquals(Result.class, dddEndpoint.getReturnType(), dddEndpoint::toGenericString);
+        }
     }
 
     @Test

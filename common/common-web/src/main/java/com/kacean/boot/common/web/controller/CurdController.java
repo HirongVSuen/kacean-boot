@@ -9,6 +9,7 @@ import com.kacean.boot.common.infra.curd.BaseCurd;
 import com.kacean.boot.common.infra.entity.BaseEntity;
 import com.kacean.boot.common.web.assembler.CurdAssembler;
 import com.kacean.boot.common.web.response.BaseDTO;
+import com.kacean.boot.common.web.response.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +22,7 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * CURD 基础控制器：只依赖 DTO 与持久化对象，提供通用 CRUD 端点。
+ * CURD 基础控制器：只依赖 DTO 与持久化对象，提供通用 CRUD 端点，响应统一使用 {@link Result} 包裹。
  * 转换器与业务 CURD 由 Spring 按子类泛型进行 {@code @Autowired} 字段注入，子类无需声明构造器。
  * 纯主键操作沿用 MyBatis-Plus 命名（如 {@code getById}、{@code removeByIds}）；
  * 支持「主键 id 或外部编号 code」的扩展操作以 {@code ByIdOrCode} / {@code ByIdsOrCodes} 结尾，
@@ -73,8 +74,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "保存")
     @PostMapping("/save")
-    public boolean save(@RequestBody DTO dto) {
-        return curd.save(assembler.toEntity(dto));
+    public Result<Boolean> save(@RequestBody DTO dto) {
+        return Result.success(curd.save(assembler.toEntity(dto)));
     }
 
     /**
@@ -85,8 +86,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "批量保存")
     @PostMapping("/saveBatch")
-    public boolean saveBatch(@RequestBody List<DTO> dtoList) {
-        return curd.saveBatch(assembler.toEntity(dtoList));
+    public Result<Boolean> saveBatch(@RequestBody List<DTO> dtoList) {
+        return Result.success(curd.saveBatch(assembler.toEntity(dtoList)));
     }
 
     /**
@@ -97,8 +98,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "保存或更新")
     @PostMapping("/saveOrUpdate")
-    public boolean saveOrUpdate(@RequestBody DTO dto) {
-        return curd.saveOrUpdate(assembler.toEntity(dto));
+    public Result<Boolean> saveOrUpdate(@RequestBody DTO dto) {
+        return Result.success(curd.saveOrUpdate(assembler.toEntity(dto)));
     }
 
     /**
@@ -109,8 +110,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "批量保存或更新")
     @PostMapping("/saveOrUpdateBatch")
-    public boolean saveOrUpdateBatch(@RequestBody List<DTO> dtoList) {
-        return curd.saveOrUpdateBatch(assembler.toEntity(dtoList));
+    public Result<Boolean> saveOrUpdateBatch(@RequestBody List<DTO> dtoList) {
+        return Result.success(curd.saveOrUpdateBatch(assembler.toEntity(dtoList)));
     }
 
     /**
@@ -121,8 +122,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "根据主键删除")
     @PostMapping("/removeById")
-    public boolean removeById(@RequestParam("id") Serializable id) {
-        return curd.removeById(id);
+    public Result<Boolean> removeById(@RequestParam("id") Serializable id) {
+        return Result.success(curd.removeById(id));
     }
 
     /**
@@ -133,8 +134,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "根据主键或外部编号删除")
     @PostMapping("/removeByIdOrCode")
-    public boolean removeByIdOrCode(@RequestBody ID id) {
-        return curd.removeById(id);
+    public Result<Boolean> removeByIdOrCode(@RequestBody ID id) {
+        return Result.success(curd.removeById(id));
     }
 
     /**
@@ -145,8 +146,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "根据主键集合批量删除")
     @PostMapping("/removeByIds")
-    public boolean removeByIds(@RequestBody Collection<?> list) {
-        return curd.removeByIds(list);
+    public Result<Boolean> removeByIds(@RequestBody Collection<?> list) {
+        return Result.success(curd.removeByIds(list));
     }
 
     /**
@@ -157,8 +158,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "根据主键或外部编号集合批量删除")
     @PostMapping("/removeByIdsOrCodes")
-    public boolean removeByIdsOrCodes(@RequestBody IDCollection idCollection) {
-        return curd.removeById(idCollection);
+    public Result<Boolean> removeByIdsOrCodes(@RequestBody IDCollection idCollection) {
+        return Result.success(curd.removeById(idCollection));
     }
 
     /**
@@ -169,8 +170,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "根据主键查询")
     @GetMapping("/getById")
-    public DTO getById(@RequestParam("id") Serializable id) {
-        return assembler.fromEntity(curd.getById(id));
+    public Result<DTO> getById(@RequestParam("id") Serializable id) {
+        return Result.success(assembler.fromEntity(curd.getById(id)));
     }
 
     /**
@@ -181,8 +182,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "根据主键或外部编号查询")
     @GetMapping("/findByIdOrCode")
-    public DTO findByIdOrCode(ID id) {
-        return assembler.fromEntity(curd.findById(id));
+    public Result<DTO> findByIdOrCode(ID id) {
+        return Result.success(assembler.fromEntity(curd.findById(id)));
     }
 
     /**
@@ -193,8 +194,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "根据主键集合查询")
     @GetMapping("/listByIds")
-    public List<DTO> listByIds(@RequestParam("idList") Collection<? extends Serializable> idList) {
-        return assembler.fromEntity(curd.listByIds(idList));
+    public Result<List<DTO>> listByIds(@RequestParam("idList") Collection<? extends Serializable> idList) {
+        return Result.success(assembler.fromEntity(curd.listByIds(idList)));
     }
 
     /**
@@ -205,8 +206,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "根据主键或外部编号集合批量查询")
     @GetMapping("/findByIdsOrCodes")
-    public List<DTO> findByIdsOrCodes(IDCollection idCollection) {
-        return assembler.fromEntity(curd.findByIds(idCollection));
+    public Result<List<DTO>> findByIdsOrCodes(IDCollection idCollection) {
+        return Result.success(assembler.fromEntity(curd.findByIds(idCollection)));
     }
 
     /**
@@ -216,8 +217,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "查询所有")
     @GetMapping("/list")
-    public List<DTO> list() {
-        return assembler.fromEntity(curd.list());
+    public Result<List<DTO>> list() {
+        return Result.success(assembler.fromEntity(curd.list()));
     }
 
     /**
@@ -228,8 +229,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "根据条件查询列表")
     @PostMapping("/listByQuery")
-    public List<DTO> listByQuery(@RequestBody Query query) {
-        return assembler.fromEntity(curd.list(query));
+    public Result<List<DTO>> listByQuery(@RequestBody Query query) {
+        return Result.success(assembler.fromEntity(curd.list(query)));
     }
 
     /**
@@ -240,9 +241,9 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "分页查询")
     @PostMapping("/page")
-    public PageResult<DTO> page(@RequestBody PageQuery<? extends Query> pageQuery) {
+    public Result<PageResult<DTO>> page(@RequestBody PageQuery<? extends Query> pageQuery) {
         PageResult<ENTITY> page = curd.page(pageQuery);
-        return assembler.fromEntity(page);
+        return Result.success(assembler.fromEntity(page));
     }
 
     /**
@@ -252,8 +253,8 @@ public class CurdController<DTO extends BaseDTO, ENTITY extends BaseEntity,
      */
     @Operation(summary = "查询总记录数")
     @GetMapping("/count")
-    public long count() {
-        return curd.count();
+    public Result<Long> count() {
+        return Result.success(curd.count());
     }
 
 }
